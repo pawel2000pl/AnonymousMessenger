@@ -58,7 +58,7 @@ body {
     background-color: rgb(26, 26, 26);
     padding: 15px 25px 15px 25px;
     border-radius: 10px;
-    width: min-content;
+    width: max-content;
     margin-bottom: 15px;
 }
 
@@ -178,7 +178,7 @@ hr {
     padding: 10px;
     padding-bottom: 18px;
     border-radius: 25px;
-    width: min-content;
+    width: max-content;
     display: block;
 }
 

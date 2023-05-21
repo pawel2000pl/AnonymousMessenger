@@ -81,7 +81,7 @@ class Server:
     def close_user(self, cursor, userhash, token=""):
         thread_id = messenger.get_thread_id(cursor, userhash, token)
         result = messenger.close_user(cursor, userhash, token)
-        if result['status'] == 'ok':
+        if result['status'] == 'ok' and messenger.thread_exists(cursor, thread_id):
             propagate_message(cursor, thread_id, result['message_id'])
         return result
     
@@ -97,7 +97,10 @@ class Server:
     @unpackCherryPyJson
     @messenger.cursor_provider
     def add_user(self, cursor, creator, username, token=""):
-        return messenger.add_user(cursor, str(creator), username, token)
+        result = messenger.add_user(cursor, str(creator), username, token)
+        if result['status'] == 'ok':
+            propagate_message(cursor, messenger.get_thread_id(cursor, creator, token), result['message_id'])
+        return result
     
     
     @cherrypy.expose()

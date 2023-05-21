@@ -10,8 +10,10 @@ DATABASE_FILENAME = "/tmp/database.db"
 MAX_MESSAGE_LENGTH = 262143
 MAX_USERNAME_LENGTH = 255
 
-CHANGES_USERNAME_MESSSAGE = "User %s has changed its nick to %s"
-CLOSE_USERNAME_MESSSAGE = "User %s has left from the chat"
+CHANGES_USERNAME_MESSSAGE = "User *%s* has changed its nick to *%s*"
+CLOSE_USERNAME_MESSSAGE = "User *%s* has left from the chat"
+CREATE_NEW_CHAT_MESSAGE = "User *%s* has created the new chat with name *%s*"
+ADD_NEW_USER_MESSAGE = "User *%s* has added the new user *%s*"
 
 TOKEN_HASH_VALID_CHARS = set("qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890-_+=")
 VALIDATE_TOKEN_QUERY = """
@@ -102,13 +104,19 @@ def get_thread_id(cursor, userhash, token=""):
     thread_id, = cursor.fetchone()
     return thread_id
     
+
+def thread_exists(cursor, thread_id):
+    cursor.execute("SELECT COUNT(*) FROM threads WHERE id = ?", [thread_id])
+    count, = cursor.fetchone()
+    return count > 0    
+
     
-def send_message(cursor, userhash, content, systemMessage=False, token=""):
+def send_message(cursor, userhash, content, system_message=False, token=""):
     if len(content) == 0:
         return {"status": "error", "message": "NO_CONTENT"}
     if len(content) > MAX_MESSAGE_LENGTH:
         return {"status": "error", "message": "TO_LONG_CONTENT"}
-    sysMsg = 1 if systemMessage else 0
+    sysMsg = 1 if system_message else 0
     cursor.execute(f"""
         INSERT INTO messages (user, timestamp, content, system)
         SELECT
@@ -119,13 +127,11 @@ def send_message(cursor, userhash, content, systemMessage=False, token=""):
         FROM
             users
         WHERE 
-        (
-                users.id = ({VALIDATE_TOKEN_QUERY}) 
-            AND 
-                users.closed = 0
-        ) OR ?
+            users.id = ({VALIDATE_TOKEN_QUERY}) 
+        AND 
+            users.closed = 0
         LIMIT 1
-        """, [get_timestamp(), str(content), sysMsg, userhash, token, sysMsg])
+        """, [get_timestamp(), str(content), sysMsg, userhash, token])
     return {"status": "ok", "message_id": cursor.lastrowid}
 
 
@@ -159,7 +165,7 @@ def close_user(cursor, userhash, token=""):
                 (
                     WITH RECURSIVE cte AS 
                     (
-                        SELECT users.username AS username, 0 AS NO 
+                        SELECT "[deleted] " || users.username || " #" AS username, 0 AS NO 
                         UNION 
                         SELECT 
                             cte.username, 
@@ -167,8 +173,8 @@ def close_user(cursor, userhash, token=""):
                         FROM 
                             cte 
                         WHERE 
-                            (username || " #" || (NO+1)) IN (SELECT u2.username FROM users AS u2)
-                    ) SELECT DISTINCT username || " #" || (MAX(NO)+1) FROM cte
+                            (username || (NO+1)) IN (SELECT u2.username FROM users AS u2)
+                    ) SELECT DISTINCT username || (MAX(NO)+1) FROM cte
                 )
         WHERE 
             id = ?
@@ -201,11 +207,14 @@ def set_user_to_account(cursor, userhash, token):
 
     
 def add_user(cursor, create_on, username: str = None, token=""):
+    send_notification = False
+    creator_username = ""
     if isinstance(create_on, int):
         thread_id = create_on
     else:          
-        cursor.execute(f"SELECT thread, closed FROM users WHERE id = ({VALIDATE_TOKEN_QUERY}) LIMIT 1", [str(create_on), token])
-        thread_id, closed = cursor.fetchone()
+        cursor.execute(f"SELECT thread, closed, username FROM users WHERE id = ({VALIDATE_TOKEN_QUERY}) LIMIT 1", [str(create_on), token])
+        thread_id, closed, creator_username = cursor.fetchone()
+        send_notification = True
         if closed:
             return {"status": "error", "message": "User is closed"}
     for i in range(256):
@@ -217,15 +226,20 @@ def add_user(cursor, create_on, username: str = None, token=""):
             pass
     if i == 255:
         return {"status": "error", "message": "Cannot set the hash"}
-    return {"status": "ok", "userhash": userhash}
+    result = {"status": "ok", "userhash": userhash}
+    if send_notification:
+        result.update(send_message(cursor, create_on, ADD_NEW_USER_MESSAGE%(creator_username, username), True, token))
+    return result
 
 
 def create_new_thread(cursor, name, first_username, token=""):
     cursor.execute("INSERT INTO threads (name) VALUES (?)", [str(name)])
     thread_id = cursor.lastrowid
     result = add_user(cursor, int(thread_id), first_username)
-    if len(token) > 0 and result["status"] == "ok":
-        set_user_to_account(cursor, result["userhash"], token)
+    if result["status"] == "ok":
+        if len(token) > 0:
+            set_user_to_account(cursor, result["userhash"], token)
+        result.update(send_message(cursor, result["userhash"], CREATE_NEW_CHAT_MESSAGE%(first_username, name), True, token))
     return result
     
     
@@ -256,7 +270,7 @@ def get_messages(cursor, userhash, offset=0, limit=64, excludeList=[], token="")
         SELECT 
             messages.id,
             users.username,
-            users.hash = init_user.hash AS me,
+            users.hash = init_user.hash AND NOT messages.system AS me,
             messages.timestamp,
             messages.content,
             messages.system
@@ -264,7 +278,7 @@ def get_messages(cursor, userhash, offset=0, limit=64, excludeList=[], token="")
             users AS init_user
         JOIN
             threads ON (init_user.thread = threads.id)
-        LEFT JOIN 
+        JOIN 
             users ON (users.thread = threads.id)
         JOIN
             messages ON (messages.user = users.id)

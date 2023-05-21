@@ -150,6 +150,8 @@ messageEditor.addEventListener('keypress', (event)=>{
 });
 
 const updateMessageList = async function () {
+    if (messagesList.scrollHeight == messagesList.clientHeight)
+        return;
     if (messagesList.scrollTop <= 0) {
         let scrollOffset = messagesList.scrollHeight - messagesList.scrollTop;
         let oldMessageOffset = messageOffset;
@@ -221,4 +223,22 @@ window.addEventListener('beforeunload', ()=>{
     ws.close()
 });
 
-connectWS();
+const ensureAccessIsValid = async function() {
+    let response = await fetch('/query/is_token_valid', {
+        method: "post",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            userhash: userhash,
+            token: localStorage.token??""
+        }),
+    });
+    let result = await response.json();
+    if (result['status'] != "ok" || (!result['result'])) {
+        alert('Acces data is invalid');
+        window.location = window.location.origin;
+    }
+};
+
+ensureAccessIsValid().then(connectWS);
