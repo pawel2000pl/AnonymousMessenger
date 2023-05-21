@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="styles.css">
+    </head>
+    <body>
+        <table class="table-division-2">
+            <tr>
+                <td class="messages-menu">
+                    <div class="darkest-background menu-summary">
+                        <details>
+                            <summary class="summary-label translatable">Generate new user</summary>
+                            <p>
+                                <label for="new-user-name" class="translatable">Username</label>
+                                <input id="new-user-name" class="new-user-input"> 
+                                <br>
+                                <label for="new-user-output" class="translatable">Generated hash</label>
+                                <input id="new-user-output" class="new-user-input" readonly="true">
+                                <br>
+                                <label for="new-user-output-href" class="translatable">Generated link</label>
+                                <input id="new-user-output-href" class="new-user-input" readonly="true">
+                                <br>
+                            </p>
+                            <input type="button" id="new-user-btn" class="translatable black-button" value="Generate">
+                        </details>
+                    </div>
+
+                    <div class="darkest-background menu-summary">
+                        <details>
+                            <summary class="summary-label translatable">Change access code</summary>
+                            <p class="translatable">This option will invalidate the current link to this chat (for this user) and it will generate the new one.</p>
+                            <input type="button" id="change-userhash-btn" class="translatable black-button" value="Generate">
+                        </details>
+                    </div>
+
+                    <div class="darkest-background menu-summary">
+                        <details>
+                            <summary class="summary-label translatable">Leave the conversation</summary>
+                            <p class="translatable">Leave this chat. If every user leave the chat, the chat will be deleted.</p>
+                            <input type="button" id="close-user-btn" class="translatable black-button" value="Leave">
+                        </details>
+                    </div>
+
+                </td>
+                <td class="messages-content">
+                    <div id="messages-list">
+
+                    </div>
+                    <div> 
+                        <div id="new-messages-label" class="translatable" style="display: none;">New messages</div>
+                        <div id="message-editor" contenteditable="true"></div>                     
+                        <div id="send-message-btn" class="black-button">&#8680</div>            
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+    </body>
+    <script src="messages.js"></script>
+    <script src="messages_menu.js"></script>
+</html>
