@@ -113,8 +113,8 @@ class Server:
     @cherrypy.expose()
     @unpackCherryPyJson
     @messenger.cursor_provider
-    def get_messages(self, cursor, userhash, offset=0, limit=100, excludeList=[], token=""):
-        return messenger.get_messages(cursor, userhash, offset, limit, excludeList, token)
+    def get_messages(self, cursor, userhash, offset=0, limit=100, id_bookmark=0, id_direction=0, excludeList=[], token=""):
+        return messenger.get_messages(cursor, userhash, offset, limit, id_bookmark, id_direction, excludeList, token)
 
 
     @cherrypy.expose()

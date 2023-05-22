@@ -12,7 +12,7 @@ def propagate_message(cursor, thread_id, message_id):
     msg, userhash = messenger.get_message(cursor, message_id)
     for ws in SUBSCRIBTIONS[thread_id]:
         msg['me'] = userhash == ws.userhash
-        ws.send(TextMessage(json.dumps([msg])))
+        ws.send(TextMessage(json.dumps({"action": "new_message", "messages": [msg]})))
 
 class ChatWebSocketHandler(WebSocket):
     
@@ -40,6 +40,20 @@ class ChatWebSocketHandler(WebSocket):
             if sent_result['status'] == "ok":
                 propagate_message(cursor, self.thread_id, sent_result['message_id'])
             connection.commit()
+            
+        if action == 'get_messages':
+            text = content.get('message', '')
+            result = messenger.get_messages(
+                cursor, 
+                self.userhash, 
+                content.get('offset', 0), 
+                content.get('limit', 64), 
+                content.get('id_bookmark', 0), 
+                content.get('id_direction', 0), 
+                content.get('excludeList', []), 
+                self.token)
+            if result['status'] == 'ok':
+                self.send(TextMessage(json.dumps({"action": "ordered_messages", "messages": result['messages']})))
                                    
 
     def closed(self, code, reason=""):

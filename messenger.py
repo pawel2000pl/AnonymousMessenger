@@ -247,8 +247,8 @@ def get_message(cursor, message_id):
     cursor.execute("""
         SELECT 
             messages.id,
-            users.username,
-            users.hash AS hash,
+            CASE messages.system WHEN 1 THEN "SYSTEM" ELSE users.username END,
+            CASE messages.system WHEN 1 THEN "__SYSTEM_HASH__" ELSE users.hash END AS hash,
             messages.timestamp,
             messages.content,
             messages.system
@@ -263,13 +263,16 @@ def get_message(cursor, message_id):
     id, username, userhash, timestamp, content, system  = cursor.fetchone()
     return {"id": id, "username": username, "timestamp": timestamp, "content": markdown(content), "system": bool(system)}, userhash
     
-def get_messages(cursor, userhash, offset=0, limit=64, excludeList=[], token=""):
+def get_messages(cursor, userhash, offset=0, limit=64, id_bookmark=0, id_direction=0, excludeList=[], token=""):
+    id_direction = int(id_direction)
+    id_direction = id_direction if abs(id_direction) == 1 else 0
+    id_bookmark = int(id_bookmark)
     limit = max(min(int(limit), 256), 0)
     offset = max(0, int(offset))
     cursor.execute(f"""
         SELECT 
             messages.id,
-            users.username,
+            CASE messages.system WHEN 1 THEN "SYSTEM" ELSE users.username END,
             users.hash = init_user.hash AND NOT messages.system AS me,
             messages.timestamp,
             messages.content,
@@ -284,11 +287,20 @@ def get_messages(cursor, userhash, offset=0, limit=64, excludeList=[], token="")
             messages ON (messages.user = users.id)
         WHERE
             init_user.id = ({VALIDATE_TOKEN_QUERY})
+        AND
+        (            
+            ? = 0
+            OR
+                (messages.id > ? AND ? = 1)
+            OR
+                (messages.id < ? AND ? = -1)
+        )
         ORDER BY
+            messages.id * ?,
             messages.id DESC
         LIMIT {int(limit)}
         OFFSET {int(offset)}
-        """, [userhash, token])
+        """, [userhash, token, id_direction, id_bookmark, id_direction, id_bookmark, id_direction, id_direction])
     
     excludeSet = set(excludeList)
     return {"status": "ok", "messages": [{"id": id, "username": username, "me": bool(me), "timestamp": timestamp, "content": markdown(content), "system": bool(system)} for id, username, me, timestamp, content, system in cursor if id not in excludeSet]}

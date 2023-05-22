@@ -48,23 +48,53 @@ const setToArray = function(set) {
     return result;
 }
 
+function realHeigh(el) {
+    // Get the DOM Node if you pass in a string
+    el = (typeof el === 'string') ? document.querySelector(el) : el; 
+  
+    var styles = window.getComputedStyle(el);
+    var margin = Math.max(parseFloat(styles['marginTop']),
+                 parseFloat(styles['marginBottom']));
+  
+    return Math.ceil(el.offsetHeight + margin);
+  }
+
 const addMessages = function(newMessagesList){
+    let halfHeight = messagesList.scrollTop + messagesList.scrollHeight/2;
+    let currentHeight = 0;
+    let halfIndex = 0;
+    for (let i=0;i<messagesList.children.length;i++) {
+        if (halfHeight <= currentHeight && halfHeight >= currentHeight + realHeigh(messagesList.children[i])) {
+            halfIndex = i;
+            break;
+        }
+
+    }
+
     let messageIds = new Set();
     for (let i=0;i<messagesList.children.length;i++) {
         messageIds.add(messagesList.children[i].data.id);
     }
     let count = 0;
+    let scrollTopOffset = 0;
     for (let i=0;i<newMessagesList.length;i++) {
         newestTimestamp = Math.max(newestTimestamp, newMessagesList[i].timestamp);
         if (!messageIds.has(newMessagesList[i].id)) {
+            let newCloud = createMessageCloud(newMessagesList[i]);
             if (messagesList.children.length == 0 || messagesList.lastChild.data.timestamp < newMessagesList[i].timestamp) 
-                messagesList.appendChild(createMessageCloud(newMessagesList[i]));
-            else if (messagesList.firstElementChild.data.timestamp > newMessagesList[i].timestamp)
-                messagesList.insertBefore(createMessageCloud(newMessagesList[i]), messagesList.firstElementChild);
+                messagesList.appendChild(newCloud);
+            else if (messagesList.firstElementChild.data.timestamp > newMessagesList[i].timestamp) {
+                messagesList.insertBefore(newCloud, messagesList.firstElementChild);
+                scrollTopOffset += realHeigh(newCloud);
+            }
             else
                 for (let j=1;j<messagesList.children.length;j++)
                     if (messagesList.children[j-1].data.timestamp < newMessagesList[i].timestamp && messagesList.children[j].data.timestamp > newMessagesList[i].timestamp) {
-                        messagesList.insertBefore(createMessageCloud(newMessagesList[i]), messagesList.children[j]);
+                        messagesList.insertBefore(newCloud, messagesList.children[j]);
+                        if (j < halfIndex) {
+                            scrollTopOffset += realHeigh(newCloud);
+                            halfIndex++;
+                        }
                         break;
                     }
             messageIds.add(newMessagesList[i].id);
@@ -72,6 +102,7 @@ const addMessages = function(newMessagesList){
         }
     }
     newestAvailableTimestamp = newestTimestamp;
+    messagesList.scrollTop += scrollTopOffset;
     return count;
 }
 
@@ -114,27 +145,8 @@ const sendMessage = async function() {
             messageEditor.innerText = "";
             messageOffset = 0;
             messagesList.scrollTop = messagesList.scrollHeight;
-        } else {
-            let response = await fetch('/query/send_message', {
-                method: "post",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    userhash: userhash,
-                    content: message,
-                    token: localStorage.token??""
-                }),
-            });
-            let result = await response.json();
-            if (result["status"] != "ok")
-                alert("Cannot send the message");
-            else {
-                messageEditor.innerText = "";
-                messageOffset = 0;
-                messagesList.scrollTop = messagesList.scrollHeight;
-            }
-        }
+        } else 
+            alert("Cannot send the message");
     } finally {
         messageEditor.disabled = "";
     }
@@ -187,7 +199,48 @@ newMessagesLabel.addEventListener('click', async ()=>{
     messagesList.scrollTop = messagesList.scrollHeight - messagesList.clientHeight - 1;
 });
 
-setInterval(updateMessageList, 300);
+var scrollEVents = 0;
+// setInterval(updateMessageList, 300);
+messagesList.addEventListener('scroll', async ()=>{
+    scrollEVents++;
+    await new Promise(r=>setTimeout(r, 300));
+    if (--scrollEVents > 0)
+        return;
+    let id_bookmark = 0;
+    let id_direction = 0;
+    let need_new = false;
+    if (messagesList.children.length > 0) {
+        if (messagesList.scrollTop <= 0) {
+            id_direction = -1;
+            id_bookmark = messagesList.firstElementChild.data.id;
+            need_new = true;
+        }
+        if (messagesList.scrollTop + messagesList.clientHeight >= messagesList.scrollHeight-1) {
+            id_direction = 1;
+            id_bookmark = messagesList.lastElementChild.data.id;
+            need_new = true;
+        }
+    }
+
+    if (!need_new) 
+        return;
+
+    let messageIds = new Array(messagesList.children.length);
+    for (let i=0;i<messagesList.children.length;i++) {
+        messageIds[i] = messagesList.children[i].data.id;
+    }
+    let data = {
+        action: 'get_messages',
+        offset: 0,
+        limit: messageBatch,
+        excludeList: messageIds,
+        id_bookmark: id_bookmark,
+        id_direction: id_direction
+    };
+    ws.send(JSON.stringify(data));
+});
+
+
 setInterval(showNewMessagesLabel, 300);
 
 const connectWS = function () {
@@ -198,22 +251,28 @@ const connectWS = function () {
         syncMessages().then(()=>{messagesList.scrollTop = messagesList.scrollHeight;});
     };
     ws.onmessage = (message)=>{
-        msgData = JSON.parse(message.data);
-        let playSound = false;
-        for (let i=0;i<msgData.length;i++) {
-            newestTimestamp = Math.max(newestTimestamp, msgData[i].timestamp);
-            playSound = playSound || (!msgData[i].me);
-        }
-        if (messageOffset == 0) {
-            addMessages(msgData);
-            if (messagesList.scrollTop >= messagesList.scrollHeight - 3/2*messagesList.clientHeight - 1) {
-                messagesList.scrollTop = messagesList.scrollHeight;
-                while (messagesList.children.length > messageLimitOnList) 
-                    messagesList.removeChild(messagesList.firstElementChild);
+        let data = JSON.parse(message.data);
+        let messages = data.messages;
+        if (data.action == "new_message") { 
+            let playSound = false;
+            for (let i=0;i<messages.length;i++) {
+                newestTimestamp = Math.max(newestTimestamp, messages[i].timestamp);
+                playSound = playSound || (!messages[i].me);
             }
+            if (messageOffset == 0) {
+                addMessages(messages);
+                if (messagesList.scrollTop >= messagesList.scrollHeight - 3/2*messagesList.clientHeight - 1) {
+                    messagesList.scrollTop = messagesList.scrollHeight;
+                    while (messagesList.children.length > messageLimitOnList) 
+                        messagesList.removeChild(messagesList.firstElementChild);
+                }
+            }
+            if (playSound) 
+                (new Audio('/notification.mp3')).play();
         }
-        if (playSound) 
-            (new Audio('/notification.mp3')).play();
+        if (data.action == "ordered_messages") {
+            addMessages(messages);
+        }
     };
     ws.onclose = ()=>{setTimeout(connectWS, MESSAGE_SYNC_INTERVAL)};
 };
