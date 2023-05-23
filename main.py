@@ -7,12 +7,15 @@ from functools import wraps
 from web_socket_module import ChatWebSocketHandler, propagate_message
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 
+MY_PATH = os.path.dirname(os.path.abspath(__file__))
+STATIC_PATH = MY_PATH + '/static/'
+
 SERVER_CONFIG = \
     {
         "/":
             {
                 'tools.staticdir.on': True,
-                'tools.staticdir.dir': os.path.dirname(os.path.abspath(__file__)) + '/static',
+                'tools.staticdir.dir': STATIC_PATH,
                 'tools.staticdir.index': 'index.html',
             },
         "/query": 
@@ -22,7 +25,11 @@ SERVER_CONFIG = \
             {                    
                 'tools.websocket.on': True,
                 'tools.websocket.handler_cls': ChatWebSocketHandler
-            }
+            },
+        '/favicon.ico': {
+            'tools.staticfile.on': True,
+            'tools.staticfile.filename': STATIC_PATH + "favicon.svg"
+        }
     }
 
 
@@ -45,6 +52,17 @@ def unpackCherryPyJson(fun):
 
     return decorator
 
+def decorator_pack(fun):
+    
+    @cherrypy.expose()
+    @unpackCherryPyJson
+    @messenger.cursor_provider
+    @wraps(fun)
+    def decorator(*args, **kwargs):
+        return fun(*args, **kwargs)
+    
+    return decorator
+
 class Server:
     
     @cherrypy.expose()
@@ -53,16 +71,12 @@ class Server:
         return {"Hello": "World"}
     
     
-    @cherrypy.expose()
-    @unpackCherryPyJson
-    @messenger.cursor_provider
+    @decorator_pack
     def is_token_valid(self, cursor, userhash, token=""):
         return messenger.is_token_valid(cursor, userhash, token=token)
             
     
-    @cherrypy.expose()
-    @unpackCherryPyJson
-    @messenger.cursor_provider
+    @decorator_pack
     def send_message(self, cursor, userhash, content, token=""):
         result = messenger.send_message(cursor, userhash, content, token=token)
         if result['status'] == 'ok':
@@ -70,16 +84,12 @@ class Server:
         return result
     
     
-    @cherrypy.expose()
-    @unpackCherryPyJson
-    @messenger.cursor_provider
+    @decorator_pack
     def change_username(self, cursor, userhash, new_username, token=""):
         return messenger.change_username(cursor, userhash, new_username, token=token)
     
     
-    @cherrypy.expose()
-    @unpackCherryPyJson
-    @messenger.cursor_provider
+    @decorator_pack
     def close_user(self, cursor, userhash, token=""):
         thread_id = messenger.get_thread_id(cursor, userhash, token)
         result = messenger.close_user(cursor, userhash, token)
@@ -88,16 +98,12 @@ class Server:
         return result
     
     
-    @cherrypy.expose()
-    @unpackCherryPyJson
-    @messenger.cursor_provider
+    @decorator_pack
     def reset_user_hash(self, cursor, userhash, token=""):
         return messenger.reset_user_hash(cursor, userhash, token)
     
     
-    @cherrypy.expose()
-    @unpackCherryPyJson
-    @messenger.cursor_provider
+    @decorator_pack
     def add_user(self, cursor, creator, username, token=""):
         result = messenger.add_user(cursor, str(creator), username, token)
         if result['status'] == 'ok':
@@ -105,23 +111,17 @@ class Server:
         return result
     
     
-    @cherrypy.expose()
-    @unpackCherryPyJson
-    @messenger.cursor_provider
+    @decorator_pack
     def create_new_thread(self, cursor, name, first_username, token=""):
         return messenger.create_new_thread(cursor, name, first_username, token)
     
     
-    @cherrypy.expose()
-    @unpackCherryPyJson
-    @messenger.cursor_provider
+    @decorator_pack
     def get_messages(self, cursor, userhash, offset=0, limit=100, id_bookmark=0, id_direction=0, excludeList=[], token=""):
         return messenger.get_messages(cursor, userhash, offset, limit, id_bookmark, id_direction, excludeList, token)
 
 
-    @cherrypy.expose()
-    @unpackCherryPyJson
-    @messenger.cursor_provider
+    @decorator_pack
     def get_newest_message_timestamp(self, cursor, userhash, token=""):
         return messenger.get_newest_message_timestamp(cursor, userhash, token)
 

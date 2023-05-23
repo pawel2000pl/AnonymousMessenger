@@ -37,9 +37,9 @@ class ChatWebSocketHandler(WebSocket):
         if action == 'message':
             text = content.get('message', '')
             sent_result = messenger.send_message(cursor, self.userhash, text, token=self.token)
-            if sent_result['status'] == "ok":
-                propagate_message(cursor, self.thread_id, sent_result['message_id'])
             connection.commit()
+            if sent_result['status'] == "ok":
+                propagate_message(connection.cursor(), self.thread_id, sent_result['message_id'])
             
         if action == 'get_messages':
             text = content.get('message', '')

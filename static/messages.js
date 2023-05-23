@@ -244,7 +244,8 @@ messagesList.addEventListener('scroll', async ()=>{
 setInterval(showNewMessagesLabel, 300);
 
 const connectWS = function () {
-    ws = new WebSocket("ws://"+window.location.host+"/ws");
+    const protocol = window.location.protocol == "http:" ? "ws:" : "wss";
+    ws = new WebSocket(protocol + "//"+window.location.host+"/ws");
     ws.onopen = ()=>{
         ws.send(JSON.stringify({"action": "subscribe", "userhash": userhash, token: localStorage.token??""}));
         messageOffset = 0;
