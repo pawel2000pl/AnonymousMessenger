@@ -3,6 +3,7 @@ import json
 import messenger
 import os
 
+from functools import wraps
 from web_socket_module import ChatWebSocketHandler, propagate_message
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 
@@ -26,7 +27,8 @@ SERVER_CONFIG = \
 
 
 def unpackCherryPyJson(fun):
-
+    
+    @wraps(fun)
     def decorator(*args, **kwargs):
         try:
             params = json.loads(cherrypy.request.body.read().decode("utf-8"))
@@ -137,6 +139,10 @@ if __name__ == "__main__":
     WebSocketPlugin(cherrypy.engine).subscribe()
     cherrypy.tools.websocket = WebSocketTool()
 
+    cherrypy.server.socket_host = "0.0.0.0" 
+    cherrypy.server.socket_port = 8080
+    if os.getenv("PRODUCTION") == "TRUE":
+        cherrypy.config.update({'global': {'environment' : 'production'}})
     cherrypy.config.update({"server.max_request_body_size": 1024*1024})
     cherrypy.tree.mount(Root(), '/', SERVER_CONFIG)
     cherrypy.tree.mount(Server(), '/query', SERVER_CONFIG)

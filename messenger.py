@@ -4,6 +4,7 @@ from hashlib import sha224
 from random import random
 from time import time
 from markdown import markdown
+from functools import wraps
 
 DATABASE_FILENAME = "/tmp/database.db"
 
@@ -57,6 +58,7 @@ def get_timestamp():
     
 def cursor_provider(fun):
     
+    @wraps(fun)
     def decorator(*args, **kwargs):
         connection = get_database_connection()
         try:
