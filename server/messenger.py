@@ -1,5 +1,6 @@
-import sqlite3
+import mysql.connector
 import bcrypt
+import os
 
 from hashlib import sha256
 from random import random
@@ -9,8 +10,6 @@ from functools import wraps
 from time import sleep
 from random import random
 
-DATABASE_FILENAME = "/tmp/database.db"
-
 MAX_MESSAGE_LENGTH = 262143
 MAX_USERNAME_LENGTH = 255
 
@@ -18,6 +17,20 @@ CHANGES_USERNAME_MESSSAGE = "User *%s* has changed its nick to *%s*"
 CLOSE_USERNAME_MESSSAGE = "User *%s* has left from the chat"
 CREATE_NEW_CHAT_MESSAGE = "User *%s* has created the new chat with name *%s*"
 ADD_NEW_USER_MESSAGE = "User *%s* has added the new user *%s*"
+
+DATABASE_HOST = os.getenv("DATABASE_HOST")
+DATABASE_NAME = os.getenv("DATABASE_NAME")
+DATABASE_USER = os.getenv("DATABASE_USER")
+DATABASE_PASS = os.getenv("DATABASE_PASS")
+
+
+def get_database_connection():
+    return mysql.connector.connect(
+        host = DATABASE_HOST,
+        user = DATABASE_USER,
+        password = DATABASE_PASS,
+        database = DATABASE_NAME)
+    
 
 HASH_VALID_CHARS = set("qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890-_+=")
 VALIDATE_ACCESS_QUERY = """
@@ -28,14 +41,13 @@ VALIDATE_ACCESS_QUERY = """
         LEFT JOIN 
             account_tokens ON (account_tokens.id = users.account)
         WHERE
-            users.hash = ?
+            users.hash = %s
         AND
             users.closed = 0
         AND
-            (users.account IS NULL OR account_tokens.hash = ?)
+            (users.account IS NULL OR account_tokens.hash = %s)
         LIMIT 1
         """   
-VALIDATE_ACCESS_QUERY_INLINE = VALIDATE_ACCESS_QUERY.replace('?', '"%s"')
         
         
 def remove_unsafe_chars(test):
@@ -43,12 +55,8 @@ def remove_unsafe_chars(test):
 
 
 def insert_inline_token_query(userhash, token):
-    return VALIDATE_ACCESS_QUERY_INLINE%(remove_unsafe_chars(userhash), remove_unsafe_chars(token))
+    return VALIDATE_ACCESS_QUERY%(remove_unsafe_chars(userhash), remove_unsafe_chars(token))
 
-
-def get_database_connection():
-    return sqlite3.connect(DATABASE_FILENAME)
-    
     
 def my_uuid():
     with open("/dev/random", "rb") as f:        
@@ -78,12 +86,6 @@ def cursor_provider(fun):
             raise err
     
     return decorator
-    
-
-@cursor_provider    
-def init_database(cursor, SCHEMA_FILENAME = "initdb.sql"):
-    with open(SCHEMA_FILENAME) as f:
-        cursor.executescript(f.read())
         
         
 def VALIDATE_ACCESS(cursor, userhash, token):
@@ -115,7 +117,7 @@ def get_thread_id(cursor, userhash, token=""):
     
 
 def thread_exists(cursor, thread_id):
-    cursor.execute("SELECT COUNT(*) FROM threads WHERE id = ?", [thread_id])
+    cursor.execute("SELECT COUNT(*) FROM threads WHERE id = %s", [thread_id])
     count, = cursor.fetchone()
     return count > 0    
 
@@ -127,12 +129,12 @@ def send_message(cursor, userhash, content, system_message=False, token=""):
         return {"status": "error", "message": "TO_LONG_CONTENT"}
     sysMsg = 1 if system_message else 0
     cursor.execute(f"""
-        INSERT INTO messages (user, timestamp, content, system)
+        INSERT INTO messages (user, timestamp, content, is_system)
         SELECT
             id,
-            ?, 
-            ?, 
-            ? 
+            %s, 
+            %s, 
+            %s 
         FROM
             users
         WHERE 
@@ -148,9 +150,9 @@ def change_username(cursor, userhash, new_username, send_message=True, token="")
     if new_username is None or len(new_username) == 0 or len(new_username) > MAX_USERNAME_LENGTH:
         new_username = "User-%d"%round(100000*random())    
     user_id = VALIDATE_ACCESS(cursor, userhash, token)
-    execute = lambda: cursor.execute("UPDATE users SET username = ? WHERE id = ?", [new_username, user_id])
+    execute = lambda: cursor.execute("UPDATE users SET username = %s WHERE id = %s", [new_username, user_id])
     if send_message:
-        cursor.execute("SELECT username FROM users WHERE id = ? LIMIT 1", [user_id])
+        cursor.execute("SELECT username FROM users WHERE id = %s LIMIT 1", [user_id])
         old_username, = cursor.fetchone()
         execute()
         send_message(cursor, userhash, CHANGES_USERNAME_MESSSAGE%(old_username, new_username))
@@ -162,7 +164,7 @@ def change_username(cursor, userhash, new_username, send_message=True, token="")
 
 def close_user(cursor, userhash, token=""):
     user_id = VALIDATE_ACCESS(cursor, userhash, token)
-    cursor.execute("SELECT username FROM users WHERE id = ? LIMIT 1", [user_id])
+    cursor.execute("SELECT username FROM users WHERE id = %s LIMIT 1", [user_id])
     username, = cursor.fetchone()
     result = send_message(cursor, userhash, CLOSE_USERNAME_MESSSAGE%username, True, token)
     cursor.execute("""
@@ -174,7 +176,7 @@ def close_user(cursor, userhash, token=""):
                 (
                     WITH RECURSIVE cte AS 
                     (
-                        SELECT "[deleted] " || users.username || " #" AS username, 0 AS NO 
+                        SELECT CONCAT("[deleted] ", users.username, " #") AS username, 0 AS NO 
                         UNION 
                         SELECT 
                             cte.username, 
@@ -182,18 +184,19 @@ def close_user(cursor, userhash, token=""):
                         FROM 
                             cte 
                         WHERE 
-                            (username || (NO+1)) IN (SELECT u2.username FROM users AS u2)
-                    ) SELECT DISTINCT username || (MAX(NO)+1) FROM cte
+                            CONCAT(username, (NO+1)) IN (SELECT u2.username FROM users AS u2)
+                    ) SELECT CONCAT(username, (MAX(NO)+1)) FROM cte GROUP BY cte.username
                 )
         WHERE 
-            id = ?
+            id = %s
         """, [user_id])
-    cursor.execute("CREATE TEMP TABLE deleting_threads (id INTEGER)")
+    cursor.execute("CREATE TEMPORARY TABLE IF NOT EXISTS deleting_threads (id INTEGER)")
+    cursor.execute("DELETE FROM deleting_threads")
     cursor.execute("INSERT INTO deleting_threads SELECT id FROM threads WHERE id NOT IN (SELECT DISTINCT thread FROM users WHERE closed = 0)")
     cursor.execute("DELETE FROM messages WHERE user IN (SELECT users.id FROM users JOIN deleting_threads ON (users.thread = deleting_threads.id))")
     cursor.execute("DELETE FROM users WHERE thread IN (SELECT id FROM deleting_threads)")
     cursor.execute("DELETE FROM threads WHERE id IN (SELECT id FROM deleting_threads)")
-    cursor.execute("DROP TABLE deleting_threads")
+    cursor.execute("DELETE FROM deleting_threads")
     return result
 
 
@@ -202,7 +205,7 @@ def reset_user_hash(cursor, userhash, token=""):
     for i in range(256):
         try:
             new_userhash = my_uuid()
-            cursor.execute("UPDATE users SET hash = ? WHERE id = ?", [new_userhash, user_id])
+            cursor.execute("UPDATE users SET hash = %s WHERE id = %s", [new_userhash, user_id])
             break
         except:
             pass  
@@ -212,7 +215,7 @@ def reset_user_hash(cursor, userhash, token=""):
 
 
 def set_user_to_account(cursor, userhash, token):    
-    cursor.execute("UPDATE users SET account = (SELECT id FROM account_tokens WHERE hash = ? LIMIT 1) WHERE users.account IS NULL AND users.hash = ?", [token, userhash])
+    cursor.execute("UPDATE users SET account = (SELECT id FROM account_tokens WHERE hash = %s LIMIT 1) WHERE users.account IS NULL AND users.hash = %s", [token, userhash])
 
     
 def add_user(cursor, create_on, username: str = None, token=""):
@@ -229,7 +232,7 @@ def add_user(cursor, create_on, username: str = None, token=""):
     for i in range(256):
         try:
             userhash = my_uuid()
-            cursor.execute("INSERT INTO users (username, thread, hash) VALUES (?, ?, ?)", [username, thread_id, userhash])
+            cursor.execute("INSERT INTO users (username, thread, hash) VALUES (%s, %s, %s)", [username, thread_id, userhash])
             break
         except:
             pass
@@ -242,7 +245,7 @@ def add_user(cursor, create_on, username: str = None, token=""):
 
 
 def create_new_thread(cursor, name, first_username, token=""):
-    cursor.execute("INSERT INTO threads (name) VALUES (?)", [str(name)])
+    cursor.execute("INSERT INTO threads (name) VALUES (%s)", [str(name)])
     thread_id = cursor.lastrowid
     result = add_user(cursor, int(thread_id), first_username)
     if result["status"] == "ok":
@@ -256,17 +259,17 @@ def get_message(cursor, message_id):
     cursor.execute("""
         SELECT 
             messages.id,
-            CASE messages.system WHEN 1 THEN "SYSTEM" ELSE users.username END,
-            CASE messages.system WHEN 1 THEN "__SYSTEM_HASH__" ELSE users.hash END AS hash,
+            CASE messages.is_system WHEN 1 THEN "SYSTEM" ELSE users.username END,
+            CASE messages.is_system WHEN 1 THEN "__SYSTEM_HASH__" ELSE users.hash END AS hash,
             messages.timestamp,
             messages.content,
-            messages.system
+            messages.is_system
         FROM
             messages
         LEFT JOIN
             users ON (messages.user = users.id)
         WHERE 
-            messages.id = ?
+            messages.id = %s
         LIMIT 1
         """, [message_id])
     id, username, userhash, timestamp, content, system  = cursor.fetchone()
@@ -281,11 +284,11 @@ def get_messages(cursor, userhash, offset=0, limit=64, id_bookmark=0, id_directi
     cursor.execute(f"""
         SELECT 
             messages.id,
-            CASE messages.system WHEN 1 THEN "SYSTEM" ELSE users.username END,
-            users.hash = init_user.hash AND NOT messages.system AS me,
+            CASE messages.is_system WHEN 1 THEN "SYSTEM" ELSE users.username END,
+            users.hash = init_user.hash AND NOT messages.is_system AS me,
             messages.timestamp,
             messages.content,
-            messages.system
+            messages.is_system
         FROM 
             users AS init_user
         JOIN
@@ -298,14 +301,14 @@ def get_messages(cursor, userhash, offset=0, limit=64, id_bookmark=0, id_directi
             init_user.id = ({VALIDATE_ACCESS_QUERY})
         AND
         (            
-            ? = 0
+            %s = 0
             OR
-                (messages.id > ? AND ? = 1)
+                (messages.id > %s AND %s = 1)
             OR
-                (messages.id < ? AND ? = -1)
+                (messages.id < %s AND %s = -1)
         )
         ORDER BY
-            messages.id * ?,
+            messages.id * %s,
             messages.id DESC
         LIMIT {int(limit)}
         OFFSET {int(offset)}
@@ -335,15 +338,15 @@ def get_newest_message_timestamp(cursor, userhash, token):
 
 
 def activity(cursor, token):
-    cursor.execute("SELECT COUNT(*) FROM valid_tokens WHERE hash = ?", [token])
+    cursor.execute("SELECT COUNT(*) FROM valid_tokens WHERE hash = %s", [token])
     count, = cursor.fetchone()
     cursor.execute("DELETE FROM tokens WHERE hash NOT IN (SELECT hash FROM valid_tokens)")
-    cursor.execute("UPDATE tokens SET last_activity_timestamp = ? WHERE hash = ?", [get_timestamp(), token])
+    cursor.execute("UPDATE tokens SET last_activity_timestamp = %s WHERE hash = %s", [get_timestamp(), token])
     return {"status": "ok", "result": count>0}
 
 
 def login(cursor, login, password, no_activity_lifespan=3600, max_lifespan=604800):
-    cursor.execute("SELECT id, password FROM accounts WHERE login = ? LIMIT 1", [login])
+    cursor.execute("SELECT id, password FROM accounts WHERE login = %s LIMIT 1", [login])
     try:
         account_id, password_hash, = cursor.fetchone()
     except TypeError as _:
@@ -361,13 +364,13 @@ def login(cursor, login, password, no_activity_lifespan=3600, max_lifespan=60480
         INSERT INTO tokens 
             (hash, account, created_timestamp, last_activity_timestamp, no_activity_lifespan, max_lifespan)
         VALUES 
-            (?, ?, ?, ?, ?, ?, ?)""", 
+            (%s, %s, %s, %s, %s, %s, %s)""", 
         [token, account_id, timestamp, timestamp, int(no_activity_lifespan), int(max_lifespan)])
     return {"status": "ok", "result": True, "token": token}
 
 
 def logout(cursor, token=""):
-    cursor.execute("DELETE FROM tokens WHERE hash = ?", [token])
+    cursor.execute("DELETE FROM tokens WHERE hash = %s", [token])
     return {"status": "ok"}
 
 

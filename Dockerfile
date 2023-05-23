@@ -1,19 +1,20 @@
 FROM python:3.11
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV APP_PATH="/usr/scr/AnonymousMessenger/"
+ENV APP_PATH="/usr/src/AnonymousMessenger/"
 ENV PRODUCTION="TRUE"
 ENV PYTHONOPTIMIZE="TRUE"
 
-RUN apt update
-RUN apt install -y sqlite3
-RUN pip install cherrypy ws4py markdown bcrypt
-
-
 RUN mkdir -p "$APP_PATH"
-COPY . "$APP_PATH/"
-
 WORKDIR "$APP_PATH"
 
+RUN apt update
+RUN pip install cherrypy ws4py markdown bcrypt mysql-connector-python
+
+COPY mysql "$APP_PATH/mysql"
+RUN bash mysql/install_transient_mysql.sh
+
+COPY . "$APP_PATH/"
+
 EXPOSE 8080
-CMD python main.py
+CMD bash start.sh

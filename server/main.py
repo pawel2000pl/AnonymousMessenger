@@ -7,9 +7,10 @@ from functools import wraps
 from web_socket_module import ChatWebSocketHandler, propagate_message
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 
-MY_PATH = os.path.dirname(os.path.abspath(__file__))
-STATIC_PATH = MY_PATH + '/static/'
+MY_PATH = os.path.dirname(os.path.abspath(__file__)) + "/"
+STATIC_PATH = MY_PATH + '../static/'
 ERROR_RESPONSE = json.dumps({"status": "error"}).encode("utf-8")
+print(STATIC_PATH)
 
 SERVER_CONFIG = \
     {
@@ -140,8 +141,6 @@ class Root:
 
 
 if __name__ == "__main__":
-    messenger.init_database()
-
     WebSocketPlugin(cherrypy.engine).subscribe()
     cherrypy.tools.websocket = WebSocketTool()
 
@@ -149,6 +148,7 @@ if __name__ == "__main__":
     cherrypy.server.socket_port = 8080
     if os.getenv("PRODUCTION") == "TRUE":
         cherrypy.config.update({'global': {'environment' : 'production'}})
+        cherrypy.log.screen = True
     cherrypy.config.update({"server.max_request_body_size": 1024*1024})
     cherrypy.tree.mount(Root(), '/', SERVER_CONFIG)
     cherrypy.tree.mount(Server(), '/query', SERVER_CONFIG)
