@@ -16,8 +16,8 @@ CLOSE_USERNAME_MESSSAGE = "User *%s* has left from the chat"
 CREATE_NEW_CHAT_MESSAGE = "User *%s* has created the new chat with name *%s*"
 ADD_NEW_USER_MESSAGE = "User *%s* has added the new user *%s*"
 
-TOKEN_HASH_VALID_CHARS = set("qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890-_+=")
-VALIDATE_TOKEN_QUERY = """
+HASH_VALID_CHARS = set("qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890-_+=")
+VALIDATE_ACCESS_QUERY = """
         SELECT 
             users.id 
         FROM 
@@ -32,15 +32,15 @@ VALIDATE_TOKEN_QUERY = """
             (users.account IS NULL OR account_tokens.hash = ?)
         LIMIT 1
         """   
-VALIDATE_TOKEN_QUERY_INLINE = VALIDATE_TOKEN_QUERY.replace('?', '"%s"')
+VALIDATE_ACCESS_QUERY_INLINE = VALIDATE_ACCESS_QUERY.replace('?', '"%s"')
 
         
 def remove_unsafe_chars(test):
-    return str().join(c for c in str(test) if c in TOKEN_HASH_VALID_CHARS)
+    return str().join(c for c in str(test) if c in HASH_VALID_CHARS)
 
 
 def insert_inline_token_query(userhash, token):
-    return VALIDATE_TOKEN_QUERY_INLINE%(remove_unsafe_chars(userhash), remove_unsafe_chars(token))
+    return VALIDATE_ACCESS_QUERY_INLINE%(remove_unsafe_chars(userhash), remove_unsafe_chars(token))
 
 
 def get_database_connection():
@@ -79,17 +79,25 @@ def init_database(cursor, SCHEMA_FILENAME = "initdb.sql"):
         cursor.executescript(f.read())
         
         
-def validate_token(cursor, userhash, token):
-    cursor.execute(VALIDATE_TOKEN_QUERY, [userhash, token])    
+def VALIDATE_ACCESS(cursor, userhash, token):
+    cursor.execute(VALIDATE_ACCESS_QUERY, [userhash, token])    
     user_id, = cursor.fetchone()
     return user_id
 
 
-def is_token_valid(cursor, userhash, token):
-    cursor.execute(f"SELECT COUNT(*) FROM ({VALIDATE_TOKEN_QUERY}) AS tmp", [userhash, token])    
+def is_access_valid(cursor, userhash, token):
+    cursor.execute(f"SELECT COUNT(*) FROM ({VALIDATE_ACCESS_QUERY}) AS tmp", [userhash, token])    
     count, = cursor.fetchone()
     return {"status": "ok", "result": count>0}
         
+
+def activity(cursor, token):
+    cursor.execute("SELECT COUNT(*) FROM valid_tokens WHERE hash = ?", [token])
+    count, = cursor.fetchone()
+    cursor.execute("DELETE FROM tokens WHERE hash NOT IN (SELECT hash FROM valid_tokens))")
+    cursor.execute("UDPATE tokens SET last_activity_timestamp = ? WHERE hash = ?", [get_timestamp(), token])
+    return {"status": "ok", "result": count>0}
+
 
 def get_thread_id(cursor, userhash, token=""):
     cursor.execute(f"""
@@ -100,7 +108,7 @@ def get_thread_id(cursor, userhash, token=""):
         JOIN 
             users ON (users.thread = threads.id)
         WHERE 
-            users.id = ({VALIDATE_TOKEN_QUERY})
+            users.id = ({VALIDATE_ACCESS_QUERY})
         LIMIT 1
         """, [userhash, token])
     thread_id, = cursor.fetchone()
@@ -129,7 +137,7 @@ def send_message(cursor, userhash, content, system_message=False, token=""):
         FROM
             users
         WHERE 
-            users.id = ({VALIDATE_TOKEN_QUERY}) 
+            users.id = ({VALIDATE_ACCESS_QUERY}) 
         AND 
             users.closed = 0
         LIMIT 1
@@ -140,7 +148,7 @@ def send_message(cursor, userhash, content, system_message=False, token=""):
 def change_username(cursor, userhash, new_username, send_message=True, token=""):
     if new_username is None or len(new_username) == 0 or len(new_username) > MAX_USERNAME_LENGTH:
         new_username = "User-%d"%round(100000*random())    
-    user_id = validate_token(cursor, userhash, token)
+    user_id = VALIDATE_ACCESS(cursor, userhash, token)
     execute = lambda: cursor.execute("UPDATE users SET username = ? WHERE id = ?", [new_username, user_id])
     if send_message:
         cursor.execute("SELECT username FROM users WHERE id = ? LIMIT 1", [user_id])
@@ -154,7 +162,7 @@ def change_username(cursor, userhash, new_username, send_message=True, token="")
     
 
 def close_user(cursor, userhash, token=""):
-    user_id = validate_token(cursor, userhash, token)
+    user_id = VALIDATE_ACCESS(cursor, userhash, token)
     cursor.execute("SELECT username FROM users WHERE id = ? LIMIT 1", [user_id])
     username, = cursor.fetchone()
     result = send_message(cursor, userhash, CLOSE_USERNAME_MESSSAGE%username, True, token)
@@ -191,7 +199,7 @@ def close_user(cursor, userhash, token=""):
 
 
 def reset_user_hash(cursor, userhash, token=""):
-    user_id = validate_token(cursor, userhash, token)
+    user_id = VALIDATE_ACCESS(cursor, userhash, token)
     for i in range(256):
         try:
             new_userhash = my_uuid()
@@ -214,7 +222,7 @@ def add_user(cursor, create_on, username: str = None, token=""):
     if isinstance(create_on, int):
         thread_id = create_on
     else:          
-        cursor.execute(f"SELECT thread, closed, username FROM users WHERE id = ({VALIDATE_TOKEN_QUERY}) LIMIT 1", [str(create_on), token])
+        cursor.execute(f"SELECT thread, closed, username FROM users WHERE id = ({VALIDATE_ACCESS_QUERY}) LIMIT 1", [str(create_on), token])
         thread_id, closed, creator_username = cursor.fetchone()
         send_notification = True
         if closed:
@@ -288,7 +296,7 @@ def get_messages(cursor, userhash, offset=0, limit=64, id_bookmark=0, id_directi
         JOIN
             messages ON (messages.user = users.id)
         WHERE
-            init_user.id = ({VALIDATE_TOKEN_QUERY})
+            init_user.id = ({VALIDATE_ACCESS_QUERY})
         AND
         (            
             ? = 0
@@ -321,7 +329,7 @@ def get_newest_message_timestamp(cursor, userhash, token):
         JOIN
             messages ON (messages.user = users.id)
         WHERE
-            init_user.id = ({VALIDATE_TOKEN_QUERY})
+            init_user.id = ({VALIDATE_ACCESS_QUERY})
         """, [userhash, token])
     max_timestamp, = cursor.fetchone()
     return {"status": "ok", "max_timestamp": max_timestamp}

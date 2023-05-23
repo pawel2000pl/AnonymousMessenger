@@ -72,8 +72,13 @@ class Server:
     
     
     @decorator_pack
-    def is_token_valid(self, cursor, userhash, token=""):
-        return messenger.is_token_valid(cursor, userhash, token=token)
+    def is_access_valid(self, cursor, userhash, token=""):
+        return messenger.is_access_valid(cursor, userhash, token=token)
+    
+    
+    @decorator_pack
+    def activity(self, cursor, token=""):
+        return messenger.activity(cursor, token=token)
             
     
     @decorator_pack

@@ -5,6 +5,16 @@ const firstUserInput = document.getElementById('first-user-input');
 const joinChatBtn = document.getElementById('join-chat-btn');
 const userHashInput = document.getElementById('userhash-input');
 
+chatNameInput.addEventListener('keypress', (event)=>{
+    if (event.key == "Enter") 
+        firstUserInput.focus();
+});
+
+firstUserInput.addEventListener('keypress', (event)=>{
+    if (event.key == "Enter") 
+    createNewChatBtn.click();
+});
+
 createNewChatBtn.addEventListener('click', async ()=>{
     let response = await fetch('/query/create_new_thread', {
         method: "post",
@@ -25,9 +35,14 @@ createNewChatBtn.addEventListener('click', async ()=>{
     window.location.href = window.location.origin + "/messages.html?userhash="+response.userhash;
 });
 
+userHashInput.addEventListener('keypress', (event)=>{
+    if (event.key == "Enter") 
+        joinChatBtn.click();
+});
+
 joinChatBtn.addEventListener('click', async ()=>{
     let userhash = userHashInput.value;
-    let response = await fetch('/query/is_token_valid', {
+    let response = await fetch('/query/is_access_valid', {
         method: "post",
         headers: {
             "Content-Type": "application/json"

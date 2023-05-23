@@ -1,3 +1,5 @@
+-- TIMESTAMPS AS MILLISECONDS
+
 CREATE TABLE IF NOT EXISTS accounts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     login TEXT,
@@ -10,10 +12,10 @@ CREATE UNIQUE INDEX accounts_logins ON accounts (login);
 CREATE TABLE IF NOT EXISTS tokens (
     hash TEXT PRIMARY KEY,
     account INTEGER,
-    created_timestamp INTEGER,
-    last_activity_timestamp INTEGER,
-    no_activity_lifespan INTEGER,
-    max_lifespan INTEGER,
+    created_timestamp INTEGER DEFAULT 0,
+    last_activity_timestamp INTEGER DEFAULT 0,
+    no_activity_lifespan INTEGER DEFAULT 3600,
+    max_lifespan INTEGER DEFAULT 604800,
     FOREIGN KEY (account) REFERENCES accounts (id)
 );
 
@@ -21,7 +23,7 @@ DROP INDEX IF EXISTS tokens_accounts;
 CREATE INDEX tokens_accounts ON tokens (account);
 
 CREATE VIEW IF NOT EXISTS valid_tokens AS 
-    SELECT *, CAST(STRFTIME('%s') AS INTEGER) AS current_timestamp FROM tokens WHERE created_timestamp + max_lifespan < current_timestamp AND last_activity_timestamp + no_activity_lifespan < current_timestamp;
+    SELECT *, CAST(STRFTIME('%s') AS INTEGER) * 1000 AS current_timestamp FROM tokens WHERE created_timestamp + max_lifespan < current_timestamp AND last_activity_timestamp + no_activity_lifespan < current_timestamp;
 
 CREATE VIEW IF NOT EXISTS account_tokens AS 
     SELECT * FROM accounts JOIN valid_tokens ON (valid_tokens.account = accounts.id);

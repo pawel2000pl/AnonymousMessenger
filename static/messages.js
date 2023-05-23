@@ -11,8 +11,7 @@ const userhash = urlParams.get('userhash');
 var messageBatch = 32;
 var messageLimitOnList = 2*messageBatch-1;
 var messageOffset = 0;
-var newestTimestamp = 0;
-var newestAvailableTimestamp = 0;
+var isNewMessage = false;
 var ws = undefined;
 
 const createMessageCloud = function(messageData) {
@@ -78,7 +77,6 @@ const addMessages = function(newMessagesList){
     let count = 0;
     let scrollTopOffset = 0;
     for (let i=0;i<newMessagesList.length;i++) {
-        newestTimestamp = Math.max(newestTimestamp, newMessagesList[i].timestamp);
         if (!messageIds.has(newMessagesList[i].id)) {
             let newCloud = createMessageCloud(newMessagesList[i]);
             if (messagesList.children.length == 0 || messagesList.lastChild.data.timestamp < newMessagesList[i].timestamp) 
@@ -101,7 +99,6 @@ const addMessages = function(newMessagesList){
             count++;
         }
     }
-    newestAvailableTimestamp = newestTimestamp;
     messagesList.scrollTop += scrollTopOffset;
     return count;
 }
@@ -161,36 +158,18 @@ messageEditor.addEventListener('keypress', (event)=>{
     }
 });
 
-const updateMessageList = async function () {
-    if (messagesList.scrollHeight == messagesList.clientHeight)
-        return;
-    if (messagesList.scrollTop <= 0) {
-        let scrollOffset = messagesList.scrollHeight - messagesList.scrollTop;
-        let oldMessageOffset = messageOffset;
-        messageOffset += messageBatch;
-        let count = await syncMessages();
-        if (count <= 0)
-            messageOffset = oldMessageOffset
-        messagesList.scrollTop = messagesList.scrollHeight - scrollOffset-1;
-        while (messagesList.children.length > messageLimitOnList) 
-            messagesList.removeChild(messagesList.lastElementChild);
-    }
+const setNewMessageAsReaded = function() {
+    if (messagesList.scrollTop >= messagesList.scrollHeight-messagesList.clientHeight-1)
+        isNewMessage = false;
+};
 
-    if (messagesList.scrollTop + messagesList.clientHeight >= messagesList.scrollHeight-1) {
-        let last = messagesList.lastElementChild;
-        if (messageOffset > 0) {
-            messageOffset = Math.max(messageOffset - messageBatch, 0);
-            await syncMessages();
-        }
-        while (messagesList.children.length > messageLimitOnList) 
-            messagesList.removeChild(messagesList.firstElementChild);
-        messagesList.scrollIntoView(last);
-    }
-}
+messagesList.addEventListener('scroll', setNewMessageAsReaded);
 
 const showNewMessagesLabel = function() {
-    newMessagesLabel.style.display = newestAvailableTimestamp==newestTimestamp?"none":"";
+    setNewMessageAsReaded();
+    newMessagesLabel.style.display = isNewMessage?"":"none";
 }
+
 
 newMessagesLabel.addEventListener('click', async ()=>{
     messageOffset = 0;
@@ -200,7 +179,6 @@ newMessagesLabel.addEventListener('click', async ()=>{
 });
 
 var scrollEVents = 0;
-// setInterval(updateMessageList, 300);
 messagesList.addEventListener('scroll', async ()=>{
     scrollEVents++;
     await new Promise(r=>setTimeout(r, 300));
@@ -257,7 +235,6 @@ const connectWS = function () {
         if (data.action == "new_message") { 
             let playSound = false;
             for (let i=0;i<messages.length;i++) {
-                newestTimestamp = Math.max(newestTimestamp, messages[i].timestamp);
                 playSound = playSound || (!messages[i].me);
             }
             if (messageOffset == 0) {
@@ -268,8 +245,10 @@ const connectWS = function () {
                         messagesList.removeChild(messagesList.firstElementChild);
                 }
             }
-            if (playSound) 
+            if (playSound) {
                 (new Audio('/notification.mp3')).play();
+                isNewMessage = true;
+            }
         }
         if (data.action == "ordered_messages") {
             addMessages(messages);
@@ -284,7 +263,7 @@ window.addEventListener('beforeunload', ()=>{
 });
 
 const ensureAccessIsValid = async function() {
-    let response = await fetch('/query/is_token_valid', {
+    let response = await fetch('/query/is_access_valid', {
         method: "post",
         headers: {
             "Content-Type": "application/json"
