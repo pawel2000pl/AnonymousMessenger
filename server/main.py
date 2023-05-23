@@ -10,7 +10,6 @@ from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 MY_PATH = os.path.dirname(os.path.abspath(__file__)) + "/"
 STATIC_PATH = MY_PATH + '../static/'
 ERROR_RESPONSE = json.dumps({"status": "error"}).encode("utf-8")
-print(STATIC_PATH)
 
 SERVER_CONFIG = \
     {
