@@ -1,11 +1,13 @@
 FROM python:3.11
 
+ENV DEBIAN_FRONTEND=noninteractive
 ENV APP_PATH="/usr/scr/AnonymousMessenger/"
 ENV PRODUCTION="TRUE"
+ENV PYTHONOPTIMIZE="TRUE"
 
 RUN apt update
 RUN apt install -y sqlite3
-RUN pip install cherrypy ws4py markdown
+RUN pip install cherrypy ws4py markdown bcrypt
 
 
 RUN mkdir -p "$APP_PATH"

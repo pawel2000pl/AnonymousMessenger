@@ -9,6 +9,7 @@ from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 
 MY_PATH = os.path.dirname(os.path.abspath(__file__))
 STATIC_PATH = MY_PATH + '/static/'
+ERROR_RESPONSE = json.dumps({"status": "error"}).encode("utf-8")
 
 SERVER_CONFIG = \
     {
@@ -48,7 +49,7 @@ def unpackCherryPyJson(fun):
             return json.dumps(fun(*args, **kwargs)).encode("utf-8")
         except Exception as err:
             cherrypy.log(err)
-            return json.dumps({"status": "error"}).encode("utf-8")
+            return ERROR_RESPONSE
 
     return decorator
 

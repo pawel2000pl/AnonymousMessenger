@@ -1,5 +1,5 @@
 const checkToken = async function() {
-    if (localStorage.token == "")
+    if (localStorage.token == undefined || localStorage.token == "")
         return;
     let response = await fetch('/query/activity', {
         method: "post",
@@ -19,4 +19,4 @@ const checkToken = async function() {
 };
 
 checkToken(false);
-setInterval(checkToken, 900);
+setInterval(checkToken, 60000);

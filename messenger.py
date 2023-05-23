@@ -1,10 +1,13 @@
 import sqlite3
+import bcrypt
 
-from hashlib import sha224
+from hashlib import sha256
 from random import random
 from time import time
 from markdown import markdown
 from functools import wraps
+from time import sleep
+from random import random
 
 DATABASE_FILENAME = "/tmp/database.db"
 
@@ -33,7 +36,7 @@ VALIDATE_ACCESS_QUERY = """
         LIMIT 1
         """   
 VALIDATE_ACCESS_QUERY_INLINE = VALIDATE_ACCESS_QUERY.replace('?', '"%s"')
-
+        
         
 def remove_unsafe_chars(test):
     return str().join(c for c in str(test) if c in HASH_VALID_CHARS)
@@ -49,8 +52,12 @@ def get_database_connection():
     
 def my_uuid():
     with open("/dev/random", "rb") as f:        
-        return sha224(f.read(64*1024)).hexdigest()
+        return sha256(f.read(64*1024)).hexdigest()
     
+
+def random_sleep(_min=0.01, _max=0.1):
+    sleep(_min+(_max-_min)*random())
+
 
 def get_timestamp():
     return round(time()*1000+0.5)
@@ -90,14 +97,6 @@ def is_access_valid(cursor, userhash, token):
     count, = cursor.fetchone()
     return {"status": "ok", "result": count>0}
         
-
-def activity(cursor, token):
-    cursor.execute("SELECT COUNT(*) FROM valid_tokens WHERE hash = ?", [token])
-    count, = cursor.fetchone()
-    cursor.execute("DELETE FROM tokens WHERE hash NOT IN (SELECT hash FROM valid_tokens))")
-    cursor.execute("UDPATE tokens SET last_activity_timestamp = ? WHERE hash = ?", [get_timestamp(), token])
-    return {"status": "ok", "result": count>0}
-
 
 def get_thread_id(cursor, userhash, token=""):
     cursor.execute(f"""
@@ -333,3 +332,46 @@ def get_newest_message_timestamp(cursor, userhash, token):
         """, [userhash, token])
     max_timestamp, = cursor.fetchone()
     return {"status": "ok", "max_timestamp": max_timestamp}
+
+
+def activity(cursor, token):
+    cursor.execute("SELECT COUNT(*) FROM valid_tokens WHERE hash = ?", [token])
+    count, = cursor.fetchone()
+    cursor.execute("DELETE FROM tokens WHERE hash NOT IN (SELECT hash FROM valid_tokens)")
+    cursor.execute("UPDATE tokens SET last_activity_timestamp = ? WHERE hash = ?", [get_timestamp(), token])
+    return {"status": "ok", "result": count>0}
+
+
+def login(cursor, login, password, no_activity_lifespan=3600, max_lifespan=604800):
+    cursor.execute("SELECT id, password FROM accounts WHERE login = ? LIMIT 1", [login])
+    try:
+        account_id, password_hash, = cursor.fetchone()
+    except TypeError as _:
+        random_sleep()
+        return {"status": "ok", "result": False}
+    
+    if not bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8')):
+        random_sleep()
+        return {"status": "ok", "result": False}
+    
+    random_sleep()
+    token = my_uuid()
+    timestamp = get_timestamp()
+    cursor.execute("""
+        INSERT INTO tokens 
+            (hash, account, created_timestamp, last_activity_timestamp, no_activity_lifespan, max_lifespan)
+        VALUES 
+            (?, ?, ?, ?, ?, ?, ?)""", 
+        [token, account_id, timestamp, timestamp, int(no_activity_lifespan), int(max_lifespan)])
+    return {"status": "ok", "result": True, "token": token}
+
+
+def logout(cursor, token=""):
+    cursor.execute("DELETE FROM tokens WHERE hash = ?", [token])
+    return {"status": "ok"}
+
+
+def register(cursor, login, password):
+    password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt(13)).decode('utf-8')
+    cursor.execute("INSERT INTO users (login, password)", [login, password_hash])
+    return {"status": "ok"}
