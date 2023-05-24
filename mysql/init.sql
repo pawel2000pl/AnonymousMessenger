@@ -55,6 +55,7 @@ CREATE TABLE users (
     hash VARCHAR(64),
     closed TINYINT NOT NULL DEFAULT 0,
     account BIGINT DEFAULT NULL,
+    can_create TINYINT NOT NULL DEFAULT 1,
     FOREIGN KEY (thread) REFERENCES threads (id),
     FOREIGN KEY (account) REFERENCES accounts (id)
 );

@@ -1,8 +1,10 @@
 
 const newUserBtn = document.getElementById('new-user-btn');
 const newUserName = document.getElementById('new-user-name');
+const generateNewUserDiv = document.getElementById('generate-new-user-div');
 const newUserOutput = document.getElementById('new-user-output');
 const newUserOutputHref = document.getElementById('new-user-output-href');
+const newUserCanCreate = document.getElementById('new-user-can-create');
 const changeUserhashBtn = document.getElementById('change-userhash-btn');
 const closeUserBtn = document.getElementById('close-user-btn');
 
@@ -15,6 +17,7 @@ newUserBtn.addEventListener('click', async ()=>{
         body: JSON.stringify({
             creator: userhash,
             username: newUserName.value,
+            can_create: newUserCanCreate.checked,
             token: localStorage.token??""
         }),
     });
@@ -25,6 +28,24 @@ newUserBtn.addEventListener('click', async ()=>{
     } else
         alert('Cannot generate the new user');
 });
+
+const checkCanCreate = async function() {
+    let response = await fetch('/query/can_create_user', {
+        method: "post",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            userhash: userhash,
+            token: localStorage.token??""
+        }),
+    });
+    let result = await response.json();
+    if (result['status'] == "ok" && result['result']) 
+        return;
+    generateNewUserDiv.style.display = "none";
+};
+checkCanCreate();
 
 changeUserhashBtn.addEventListener('click', async ()=>{
     let response = await fetch('/query/reset_user_hash', {

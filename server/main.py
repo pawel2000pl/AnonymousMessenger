@@ -110,8 +110,13 @@ class Server:
     
     
     @decorator_pack
-    def add_user(self, cursor, creator, username, token=""):
-        result = messenger.add_user(cursor, str(creator), username, token)
+    def can_create_user(self, cursor, userhash, token=""):
+        return messenger.can_create_user(cursor, userhash, token="")
+    
+    
+    @decorator_pack
+    def add_user(self, cursor, creator, username, can_create=True, token=""):
+        result = messenger.add_user(cursor, str(creator), username, can_create, token)
         if result['status'] == 'ok':
             propagate_message(cursor, messenger.get_thread_id(cursor, creator, token), result['message_id'])
         return result

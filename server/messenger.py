@@ -193,6 +193,12 @@ def remove_unused_threads(cursor):
     cursor.execute("DELETE FROM deleting_threads")    
 
 
+def can_create_user(cursor, userhash, token=""):
+    cursor.execute(f"SELECT can_create FROM users WHERE id = ({VALIDATE_ACCESS_QUERY})", [userhash, token])
+    can_create, = cursor.fetchone()
+    return {"status": "ok", "result": bool(can_create)}
+
+
 def close_user(cursor, userhash, token=""):
     user_id = VALIDATE_ACCESS(cursor, userhash, token)
     cursor.execute("SELECT username FROM users WHERE id = %s LIMIT 1", [user_id])
@@ -249,21 +255,23 @@ def set_user_to_account(cursor, userhash, token):
     cursor.execute("UPDATE users SET account = (SELECT id FROM account_tokens WHERE hash = %s LIMIT 1) WHERE users.account IS NULL AND users.hash = %s", [token, userhash])
 
     
-def add_user(cursor, create_on, username: str = None, token=""):
+def add_user(cursor, create_on, username: str = None, can_create=True, token=""):
     send_notification = False
     creator_username = ""
     if isinstance(create_on, int):
         thread_id = create_on
     else:          
-        cursor.execute(f"SELECT thread, closed, username FROM users WHERE id = ({VALIDATE_ACCESS_QUERY}) LIMIT 1", [str(create_on), token])
-        thread_id, closed, creator_username = cursor.fetchone()
+        cursor.execute(f"SELECT thread, closed, username, can_create FROM users WHERE id = ({VALIDATE_ACCESS_QUERY}) LIMIT 1", [str(create_on), token])
+        thread_id, closed, creator_username, creator_can_create = cursor.fetchone()
         send_notification = True
         if closed:
             return {"status": "error", "message": "User is closed"}
+        if not creator_can_create:
+            return {"status": "error", "message": "User cannot create a new user"}
     for i in range(256):
         try:
             userhash = my_uuid()
-            cursor.execute("INSERT INTO users (username, thread, hash) VALUES (%s, %s, %s)", [username, thread_id, userhash])
+            cursor.execute("INSERT INTO users (username, thread, hash, can_create) VALUES (%s, %s, %s, %s)", [username, thread_id, userhash, int(bool(can_create))])
             break
         except:
             pass
@@ -278,7 +286,7 @@ def add_user(cursor, create_on, username: str = None, token=""):
 def create_new_thread(cursor, name, first_username, token=""):
     cursor.execute("INSERT INTO threads (name) VALUES (%s)", [str(name)])
     thread_id = cursor.lastrowid
-    result = add_user(cursor, int(thread_id), first_username)
+    result = add_user(cursor, int(thread_id), first_username, True)
     if result["status"] == "ok":
         if len(token) > 0:
             set_user_to_account(cursor, result["userhash"], token)
