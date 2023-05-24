@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ "$TRANSIENT_DATABASE" != "FALSE" ];
+if [ "$TRANSIENT_DATABASE" == "TRUE" ];
 then
     cd /tmp
     apt install -y wget

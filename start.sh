@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ "$TRANSIENT_DATABASE" != "FALSE" ];
+if [ "$TRANSIENT_DATABASE" == "TRUE" ];
 then
     echo "Starting mysql"
     /usr/bin/mysqld_safe --user=mysql --log-bin-trust-function-creators &
@@ -18,7 +18,7 @@ python3 server/main.py
 
 echo "Exiting"
 
-if [ "$TRANSIENT_DATABASE" != "FALSE" ];
+if [ "$TRANSIENT_DATABASE" == "TRUE" ];
 then
     killall mysqld
 fi
