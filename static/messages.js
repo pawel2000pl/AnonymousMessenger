@@ -5,8 +5,7 @@ const sendMessageBtn = document.getElementById('send-message-btn');
 const messagesList = document.getElementById('messages-list');
 const newMessagesLabel = document.getElementById('new-messages-label');
 
-const urlParams = new URLSearchParams(window.location.search);
-const userhash = urlParams.get('userhash');
+const notification = new Audio('/notification.ogg');
 
 var messageBatch = 32;
 var messageLimitOnList = 2*messageBatch-1;
@@ -48,7 +47,6 @@ const setToArray = function(set) {
 }
 
 function realHeigh(el) {
-    // Get the DOM Node if you pass in a string
     el = (typeof el === 'string') ? document.querySelector(el) : el; 
   
     var styles = window.getComputedStyle(el);
@@ -62,13 +60,11 @@ const addMessages = function(newMessagesList){
     let halfHeight = messagesList.scrollTop + messagesList.scrollHeight/2;
     let currentHeight = 0;
     let halfIndex = 0;
-    for (let i=0;i<messagesList.children.length;i++) {
+    for (let i=0;i<messagesList.children.length;i++) 
         if (halfHeight <= currentHeight && halfHeight >= currentHeight + realHeigh(messagesList.children[i])) {
             halfIndex = i;
             break;
         }
-
-    }
 
     let messageIds = new Set();
     for (let i=0;i<messagesList.children.length;i++) {
@@ -76,6 +72,7 @@ const addMessages = function(newMessagesList){
     }
     let count = 0;
     let scrollTopOffset = 0;
+    let addedBefore = 0;
     for (let i=0;i<newMessagesList.length;i++) {
         if (!messageIds.has(newMessagesList[i].id)) {
             let newCloud = createMessageCloud(newMessagesList[i]);
@@ -84,6 +81,8 @@ const addMessages = function(newMessagesList){
             else if (messagesList.firstElementChild.data.timestamp > newMessagesList[i].timestamp) {
                 messagesList.insertBefore(newCloud, messagesList.firstElementChild);
                 scrollTopOffset += realHeigh(newCloud);
+                halfIndex++;
+                addedBefore++;
             }
             else
                 for (let j=1;j<messagesList.children.length;j++)
@@ -92,6 +91,7 @@ const addMessages = function(newMessagesList){
                         if (j < halfIndex) {
                             scrollTopOffset += realHeigh(newCloud);
                             halfIndex++;
+                            addedBefore++;
                         }
                         break;
                     }
@@ -99,36 +99,20 @@ const addMessages = function(newMessagesList){
             count++;
         }
     }
+    if (count) {
+        if (addedBefore > count/2) {
+            console.log('delete last');
+            while (messagesList.children.length > messageLimitOnList) 
+                messagesList.removeChild(messagesList.lastElementChild);
+        } else {
+            console.log('delete first');
+            while (messagesList.children.length > messageLimitOnList) 
+                messagesList.removeChild(messagesList.firstChild);
+        }
+    }
     messagesList.scrollTop += scrollTopOffset;
     return count;
 }
-
-const syncMessages = async function () {
-    let messageIds = new Array(messagesList.children.length);
-    for (let i=0;i<messagesList.children.length;i++) {
-        messageIds[i] = messagesList.children[i].data.id;
-    }
-
-    let response = await fetch('/query/get_messages', {
-        method: "post",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            userhash: userhash,
-            limit: messageBatch,
-            offset: messageOffset,
-            excludeList: messageIds,
-            token: localStorage.token??""
-        }),
-    });
-
-    let result = await response.json();
-    if (result['status'] != "ok")
-        return -1;
-
-    return addMessages(result.messages);
-};
 
 const sendMessage = async function() {
     const message = messageEditor.innerText;
@@ -170,12 +154,16 @@ const showNewMessagesLabel = function() {
     newMessagesLabel.style.display = isNewMessage?"":"none";
 }
 
-
 newMessagesLabel.addEventListener('click', async ()=>{
     messageOffset = 0;
     messagesList.innerHTML = "";
-    await syncMessages();
-    messagesList.scrollTop = messagesList.scrollHeight - messagesList.clientHeight - 1;
+    let data = {
+        action: 'get_newest',
+        offset: 0,
+        limit: messageBatch,
+        excludeList: [],
+    };
+    ws.send(JSON.stringify(data));
 });
 
 var scrollEVents = 0;
@@ -227,7 +215,13 @@ const connectWS = function () {
     ws.onopen = ()=>{
         ws.send(JSON.stringify({"action": "subscribe", "userhash": userhash, token: localStorage.token??""}));
         messageOffset = 0;
-        syncMessages().then(()=>{messagesList.scrollTop = messagesList.scrollHeight;});
+        let data = {
+            action: 'get_newest',
+            offset: 0,
+            limit: messageBatch,
+            excludeList: [],
+        };
+        ws.send(JSON.stringify(data));
     };
     ws.onmessage = (message)=>{
         let data = JSON.parse(message.data);
@@ -246,12 +240,14 @@ const connectWS = function () {
                 }
             }
             if (playSound) {
-                (new Audio('/notification.ogg')).play();
+                notification.play();
                 isNewMessage = true;
             }
         }
         if (data.action == "ordered_messages") {
             addMessages(messages);
+            if (data.newest) 
+                messagesList.scrollTop = messagesList.scrollHeight;
         }
     };
     ws.onclose = ()=>{setTimeout(connectWS, MESSAGE_SYNC_INTERVAL)};
@@ -262,22 +258,4 @@ window.addEventListener('beforeunload', ()=>{
     ws.close()
 });
 
-const ensureAccessIsValid = async function() {
-    let response = await fetch('/query/is_access_valid', {
-        method: "post",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            userhash: userhash,
-            token: localStorage.token??""
-        }),
-    });
-    let result = await response.json();
-    if (result['status'] != "ok" || (!result['result'])) {
-        alert('Acces data is invalid');
-        window.location = window.location.origin;
-    }
-};
-
-ensureAccessIsValid().then(connectWS);
+permissionChecks.then(connectWS);

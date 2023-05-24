@@ -41,7 +41,7 @@ class ChatWebSocketHandler(WebSocket):
             if sent_result['status'] == "ok":
                 propagate_message(connection.cursor(), self.thread_id, sent_result['message_id'])
             
-        if action == 'get_messages':
+        if action == 'get_messages' or action == 'get_newest':
             text = content.get('message', '')
             result = messenger.get_messages(
                 cursor, 
@@ -53,7 +53,7 @@ class ChatWebSocketHandler(WebSocket):
                 content.get('excludeList', []), 
                 self.token)
             if result['status'] == 'ok':
-                self.send(TextMessage(json.dumps({"action": "ordered_messages", "messages": result['messages']})))
+                self.send(TextMessage(json.dumps({"action": "ordered_messages", "newest": action == 'get_newest', "messages": result['messages']})))
                                    
 
     def closed(self, code, reason=""):

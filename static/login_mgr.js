@@ -1,3 +1,25 @@
+const urlParams = new URLSearchParams(window.location.search);
+const userhash = urlParams.get('userhash');
+
+const ensureAccessIsValid = async function() {
+    let response = await fetch('/query/is_access_valid', {
+        method: "post",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            userhash: userhash,
+            token: localStorage.token??""
+        }),
+    });
+    let result = await response.json();
+    if (result['status'] != "ok" || (!result['result'])) {
+        alert('Acces data is invalid');
+        window.location = window.location.origin;
+    }
+};
+
+
 const checkToken = async function() {
     if (localStorage.token == undefined || localStorage.token == "")
         return;
@@ -18,5 +40,5 @@ const checkToken = async function() {
     }
 };
 
-checkToken(false);
+var permissionChecks = checkToken(false).then(()=>{return ensureAccessIsValid();});
 setInterval(checkToken, 60000);
