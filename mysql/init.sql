@@ -1,6 +1,8 @@
 -- WARNING: TIMESTAMPS AS MILLISECONDS
 -- CHANGE ACCESS DATA BEFORE EXECUTE ON THE REMOTE SERVER
 
+BEGIN;
+
 CREATE DATABASE anonymous_messenger_db;
 CREATE USER IF NOT EXISTS 'anonymous_messenger'@'localhost' IDENTIFIED BY 'anonymous_messenger_pass';
 GRANT SELECT ON anonymous_messenger_db.* TO 'anonymous_messenger'@'localhost';
@@ -32,9 +34,11 @@ CREATE TABLE tokens (
 );
 
 CREATE INDEX tokens_accounts ON tokens (account);
+CREATE INDEX tokens_created ON tokens (created_timestamp);
+CREATE INDEX tokens_activity ON tokens (last_activity_timestamp);
 
 CREATE VIEW valid_tokens AS 
-    SELECT * FROM tokens WHERE created_timestamp + max_lifespan < UNIX_TIMESTAMP() * 1000 AND last_activity_timestamp + no_activity_lifespan < UNIX_TIMESTAMP() * 1000;
+    SELECT * FROM tokens WHERE created_timestamp < UNIX_TIMESTAMP() * 1000 - max_lifespan AND last_activity_timestamp < UNIX_TIMESTAMP() * 1000 - no_activity_lifespan;
 
 CREATE VIEW account_tokens AS 
     SELECT * FROM accounts JOIN valid_tokens ON (valid_tokens.account = accounts.id);
@@ -49,7 +53,7 @@ CREATE TABLE users (
     username TEXT CHECK(LENGTH(TRIM(username)) > 0 AND LENGTH(username) < 256),
     thread BIGINT,
     hash VARCHAR(64),
-    closed TINYINT DEFAULT 0,
+    closed TINYINT NOT NULL DEFAULT 0,
     account BIGINT DEFAULT NULL,
     FOREIGN KEY (thread) REFERENCES threads (id),
     FOREIGN KEY (account) REFERENCES accounts (id)
@@ -61,11 +65,13 @@ CREATE UNIQUE INDEX users_hash ON users (hash);
 CREATE TABLE messages (
     id BIGINT AUTO_INCREMENT PRIMARY KEY ,
     user BIGINT,
-    timestamp BIGINT,
+    timestamp BIGINT NOT NULL DEFAULT 0,
     content LONGTEXT,
-    is_system TINYINT DEFAULT 0,
+    is_system TINYINT NOT NULL DEFAULT 0,
     FOREIGN KEY (user) REFERENCES users (id),
-    CHECK(LENGTH(content) > 0 AND LENGTH(content) < 262144)
+    CHECK(content IS NOT NULL AND LENGTH(content) > 0 AND LENGTH(content) < 262144)
 );
 
 CREATE UNIQUE INDEX messages_index ON messages (user, timestamp);
+
+COMMIT;

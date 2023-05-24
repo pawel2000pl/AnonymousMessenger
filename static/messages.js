@@ -246,7 +246,7 @@ const connectWS = function () {
                 }
             }
             if (playSound) {
-                (new Audio('/notification.mp3')).play();
+                (new Audio('/notification.ogg')).play();
                 isNewMessage = true;
             }
         }

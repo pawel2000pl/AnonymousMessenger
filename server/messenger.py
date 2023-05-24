@@ -1,6 +1,7 @@
 import mysql.connector
 import bcrypt
 import os
+import threading
 
 from hashlib import sha256
 from random import random
@@ -12,6 +13,7 @@ from random import random
 
 MAX_MESSAGE_LENGTH = 262143
 MAX_USERNAME_LENGTH = 255
+DELETE_THREAD_TIME = 1000 * 3600 * 24 * 365
 
 CHANGES_USERNAME_MESSSAGE = "User *%s* has changed its nick to *%s*"
 CLOSE_USERNAME_MESSSAGE = "User *%s* has left from the chat"
@@ -163,6 +165,33 @@ def change_username(cursor, userhash, new_username, send_message=True, token="")
     
     return {"status": "ok"}
     
+    
+def remove_unused_threads(cursor):
+    cursor.execute("CREATE TEMPORARY TABLE IF NOT EXISTS deleting_threads (id INTEGER)")
+    cursor.execute("DELETE FROM deleting_threads")
+    cursor.execute("""
+        INSERT INTO deleting_threads 
+        SELECT 
+            threads.id
+        FROM
+            threads
+        LEFT JOIN
+            users ON (users.thread = threads.id)
+        LEFT JOIN
+            messages ON (messages.user = users.id)
+        GROUP BY
+            threads.id
+        HAVING
+            MAX(messages.timestamp) < UNIX_TIMESTAMP() * 1000 - %s
+        OR
+            MIN(users.closed) = 1
+            """, [DELETE_THREAD_TIME])
+    cursor.execute("DELETE FROM messages WHERE user IN (SELECT users.id FROM users JOIN deleting_threads ON (users.thread = deleting_threads.id))")
+    cursor.execute("DELETE FROM users WHERE thread IN (SELECT id FROM deleting_threads)")
+    cursor.execute("DELETE FROM threads WHERE id IN (SELECT id FROM deleting_threads)") 
+    cursor.execute("DELETE FROM threads WHERE id IN (SELECT id FROM deleting_threads)")
+    cursor.execute("DELETE FROM deleting_threads")    
+
 
 def close_user(cursor, userhash, token=""):
     user_id = VALIDATE_ACCESS(cursor, userhash, token)
@@ -198,13 +227,7 @@ def close_user(cursor, userhash, token=""):
         WHERE 
             id = %s
         """, [user_id, user_id])
-    cursor.execute("CREATE TEMPORARY TABLE IF NOT EXISTS deleting_threads (id INTEGER)")
-    cursor.execute("DELETE FROM deleting_threads")
-    cursor.execute("INSERT INTO deleting_threads SELECT id FROM threads WHERE id NOT IN (SELECT DISTINCT thread FROM users WHERE closed = 0)")
-    cursor.execute("DELETE FROM messages WHERE user IN (SELECT users.id FROM users JOIN deleting_threads ON (users.thread = deleting_threads.id))")
-    cursor.execute("DELETE FROM users WHERE thread IN (SELECT id FROM deleting_threads)")
-    cursor.execute("DELETE FROM threads WHERE id IN (SELECT id FROM deleting_threads)")
-    cursor.execute("DELETE FROM deleting_threads")
+    remove_unused_threads(cursor)
     return result
 
 

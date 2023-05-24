@@ -22,5 +22,4 @@ then
 
     rm -f /tmp/mysql-apt-config_0.8.22-1_all.deb
     rm -f /tmp/logs.txt
-
 fi
