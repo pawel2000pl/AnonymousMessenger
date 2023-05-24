@@ -178,7 +178,13 @@ def close_user(cursor, userhash, token=""):
                 (
                     WITH RECURSIVE cte AS 
                     (
-                        SELECT CONCAT("[deleted] ", users.username, " #") AS username, 0 AS NO 
+                        SELECT 
+                            CONCAT("[deleted] ", u1.username, " #") AS username, 
+                            0 AS NO 
+                        FROM 
+                            users AS u1 
+                        WHERE 
+                            u1.id = %s 
                         UNION 
                         SELECT 
                             cte.username, 
@@ -191,7 +197,7 @@ def close_user(cursor, userhash, token=""):
                 )
         WHERE 
             id = %s
-        """, [user_id])
+        """, [user_id, user_id])
     cursor.execute("CREATE TEMPORARY TABLE IF NOT EXISTS deleting_threads (id INTEGER)")
     cursor.execute("DELETE FROM deleting_threads")
     cursor.execute("INSERT INTO deleting_threads SELECT id FROM threads WHERE id NOT IN (SELECT DISTINCT thread FROM users WHERE closed = 0)")
