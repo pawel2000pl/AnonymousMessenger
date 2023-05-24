@@ -1,5 +1,7 @@
 FROM python:3.11
 
+ARG TRANSIENT_DATABASE="FALSE"
+
 ENV DEBIAN_FRONTEND=noninteractive
 ENV APP_PATH="/usr/src/AnonymousMessenger/"
 ENV PRODUCTION="TRUE"

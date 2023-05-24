@@ -22,6 +22,7 @@ DATABASE_HOST = os.getenv("DATABASE_HOST")
 DATABASE_NAME = os.getenv("DATABASE_NAME")
 DATABASE_USER = os.getenv("DATABASE_USER")
 DATABASE_PASS = os.getenv("DATABASE_PASS")
+DATABASE_POTR = os.getenv("DATABASE_PORT", "3306")
 
 
 def get_database_connection():
@@ -29,7 +30,8 @@ def get_database_connection():
         host = DATABASE_HOST,
         user = DATABASE_USER,
         password = DATABASE_PASS,
-        database = DATABASE_NAME)
+        database = DATABASE_NAME,
+        port = DATABASE_POTR)
     
 
 HASH_VALID_CHARS = set("qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890-_+=")
