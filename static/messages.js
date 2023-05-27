@@ -101,11 +101,9 @@ const addMessages = function(newMessagesList){
     }
     if (count) {
         if (addedBefore > count/2) {
-            console.log('delete last');
             while (messagesList.children.length > messageLimitOnList) 
                 messagesList.removeChild(messagesList.lastElementChild);
         } else {
-            console.log('delete first');
             while (messagesList.children.length > messageLimitOnList) 
                 messagesList.removeChild(messagesList.firstChild);
         }

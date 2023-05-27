@@ -357,25 +357,6 @@ def get_messages(cursor, userhash, offset=0, limit=64, id_bookmark=0, id_directi
     return {"status": "ok", "messages": [{"id": id, "username": username, "me": bool(me), "timestamp": timestamp, "content": markdown(content), "system": bool(system)} for id, username, me, timestamp, content, system in cursor if id not in excludeSet]}
 
 
-def get_newest_message_timestamp(cursor, userhash, token):
-    cursor.execute(f"""
-        SELECT
-            MAX(messages.timestamp)
-        FROM 
-            users AS init_user
-        JOIN
-            threads ON (init_user.thread = threads.id)
-        JOIN 
-            users ON (users.thread = threads.id)
-        JOIN
-            messages ON (messages.user = users.id)
-        WHERE
-            init_user.id = ({VALIDATE_ACCESS_QUERY})
-        """, [userhash, token])
-    max_timestamp, = cursor.fetchone()
-    return {"status": "ok", "max_timestamp": max_timestamp}
-
-
 def activity(cursor, token):
     cursor.execute("SELECT COUNT(*) FROM valid_tokens WHERE hash = %s", [token])
     count, = cursor.fetchone()

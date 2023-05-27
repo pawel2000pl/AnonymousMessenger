@@ -4,7 +4,7 @@ import messenger
 import os
 
 from functools import wraps
-from web_socket_module import ChatWebSocketHandler, propagate_message
+from web_socket_module import ChatWebSocketHandler, NotifyWebSocketHandler, propagate_message
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 
 MY_PATH = os.path.dirname(os.path.abspath(__file__)) + "/"
@@ -26,6 +26,11 @@ SERVER_CONFIG = \
             {                    
                 'tools.websocket.on': True,
                 'tools.websocket.handler_cls': ChatWebSocketHandler
+            },        
+        "/ws_multi_lite":
+            {                    
+                'tools.websocket.on': True,
+                'tools.websocket.handler_cls': NotifyWebSocketHandler
             },
         '/favicon.ico': {
             'tools.staticfile.on': True,
@@ -132,16 +137,15 @@ class Server:
         return messenger.get_messages(cursor, userhash, offset, limit, id_bookmark, id_direction, excludeList, token)
 
 
-    @decorator_pack
-    def get_newest_message_timestamp(self, cursor, userhash, token=""):
-        return messenger.get_newest_message_timestamp(cursor, userhash, token)
-
-
 class Root:
     
     @cherrypy.expose()
     def ws(self):
         cherrypy.log("Handler created: %s" % repr(cherrypy.request.ws_handler))
+        
+    @cherrypy.expose()
+    def ws_multi_lite(self):
+        cherrypy.log("Multi handler created: %s" % repr(cherrypy.request.ws_handler))
 
 
 if __name__ == "__main__":
