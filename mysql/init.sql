@@ -1,8 +1,6 @@
 -- WARNING: TIMESTAMPS AS MILLISECONDS
 -- CHANGE ACCESS DATA BEFORE EXECUTE ON THE REMOTE SERVER
 
-BEGIN;
-
 CREATE DATABASE anonymous_messenger_db;
 CREATE USER IF NOT EXISTS 'anonymous_messenger'@'localhost' IDENTIFIED BY 'anonymous_messenger_pass';
 GRANT SELECT ON anonymous_messenger_db.* TO 'anonymous_messenger'@'localhost';
@@ -18,18 +16,20 @@ CREATE TABLE accounts (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     login TEXT, 
     password TEXT,
+    last_login_timestamp BIGINT NOT NULL DEFAULT 0,
   	CHECK(LENGTH(login) < 256 AND LENGTH(login) > 1)
 );
 
 CREATE UNIQUE INDEX accounts_logins ON accounts (login(16));
+CREATE INDEX accounts_login_timestamp ON accounts (last_login_timestamp);
 
 CREATE TABLE tokens (
     hash VARCHAR(64) PRIMARY KEY,
     account BIGINT,
     created_timestamp BIGINT DEFAULT 0,
     last_activity_timestamp BIGINT DEFAULT 0,
-    no_activity_lifespan BIGINT DEFAULT 3600,
-    max_lifespan BIGINT DEFAULT 604800,
+    no_activity_lifespan BIGINT DEFAULT 3600000,
+    max_lifespan BIGINT DEFAULT 604800000,
     FOREIGN KEY (account) REFERENCES accounts (id)
 );
 
@@ -38,10 +38,22 @@ CREATE INDEX tokens_created ON tokens (created_timestamp);
 CREATE INDEX tokens_activity ON tokens (last_activity_timestamp);
 
 CREATE VIEW valid_tokens AS 
-    SELECT * FROM tokens WHERE created_timestamp < UNIX_TIMESTAMP() * 1000 - max_lifespan AND last_activity_timestamp < UNIX_TIMESTAMP() * 1000 - no_activity_lifespan;
+    SELECT 
+        * 
+    FROM 
+        tokens 
+    WHERE 
+        created_timestamp > UNIX_TIMESTAMP() * 1000 - max_lifespan 
+    AND 
+        last_activity_timestamp > UNIX_TIMESTAMP() * 1000 - no_activity_lifespan;
 
 CREATE VIEW account_tokens AS 
-    SELECT * FROM accounts JOIN valid_tokens ON (valid_tokens.account = accounts.id);
+    SELECT 
+        * 
+    FROM 
+        accounts 
+    JOIN 
+        valid_tokens ON (valid_tokens.account = accounts.id);
 
 CREATE TABLE threads (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -56,6 +68,7 @@ CREATE TABLE users (
     closed TINYINT NOT NULL DEFAULT 0,
     account BIGINT DEFAULT NULL,
     can_create TINYINT NOT NULL DEFAULT 1,
+    last_read_time BIGINT NOT NULL DEFAULT 0,
     FOREIGN KEY (thread) REFERENCES threads (id),
     FOREIGN KEY (account) REFERENCES accounts (id)
 );
@@ -75,4 +88,35 @@ CREATE TABLE messages (
 
 CREATE UNIQUE INDEX messages_index ON messages (user, timestamp);
 
-COMMIT;
+CREATE VIEW newest_user_message AS
+    SELECT 
+        init_user.id AS id,
+        IFNULL(MAX(messages.timestamp), 0) AS timestamp
+    FROM 
+        users AS init_user
+    JOIN 
+        threads ON (init_user.thread = threads.id)
+    JOIN 
+        users ON (users.thread = threads.id)
+    JOIN
+        messages ON (messages.user = users.id)
+    GROUP BY
+        init_user.id;
+
+CREATE VIEW messages_view AS
+    SELECT 
+        init_user.id AS init_user_id,
+        messages.id AS id,
+        CASE messages.is_system WHEN 1 THEN "SYSTEM" ELSE users.username END AS sender,
+        users.hash = init_user.hash AND NOT messages.is_system AS me,
+        messages.timestamp AS timestamp,
+        messages.content AS content,
+        messages.is_system AS is_system
+    FROM 
+        users AS init_user
+    JOIN
+        threads ON (init_user.thread = threads.id)
+    JOIN 
+        users ON (users.thread = threads.id)
+    JOIN
+        messages ON (messages.user = users.id);

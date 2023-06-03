@@ -4,6 +4,8 @@ const messageEditor = document.getElementById('message-editor');
 const sendMessageBtn = document.getElementById('send-message-btn');
 const messagesList = document.getElementById('messages-list');
 const newMessagesLabel = document.getElementById('new-messages-label');
+const menuButton = document.getElementById('menu-button');
+const messagesMenuColumn = document.getElementById('messages-menu-column');
 
 const notification = new Audio('/notification.ogg');
 
@@ -12,6 +14,13 @@ var messageLimitOnList = 2*messageBatch-1;
 var messageOffset = 0;
 var isNewMessage = false;
 var ws = undefined;
+
+menuButton.addEventListener('click', ()=>{
+    messagesMenuColumn.style.display = messagesMenuColumn.style.display==""?"none":"";
+});
+
+if (window.innerHeight > window.innerWidth)
+    menuButton.click();
 
 const createMessageCloud = function(messageData) {
     let message = document.createElement('div');

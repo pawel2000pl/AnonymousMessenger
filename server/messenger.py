@@ -14,6 +14,9 @@ from random import random
 MAX_MESSAGE_LENGTH = 262143
 MAX_USERNAME_LENGTH = 255
 DELETE_THREAD_TIME = 1000 * 3600 * 24 * 365
+DELETE_ACCOUNT_TIME = 1000 * 3600 * 24 * 365 * 3
+ACTIVATE_ACCOUNT_TIME = 1000 * 60 * 5
+MAINTAIN_PROBABILITY = 1e-2
 
 CHANGES_USERNAME_MESSSAGE = "User *%s* has changed its nick to *%s*"
 CLOSE_USERNAME_MESSSAGE = "User *%s* has left from the chat"
@@ -193,6 +196,26 @@ def remove_unused_threads(cursor):
     cursor.execute("DELETE FROM deleting_threads")    
 
 
+def delete_old_tokens_accounts(cursor):
+    cursor.execute("DELETE FROM tokens WHERE hash NOT IN (SELECT hash FROM valid_tokens)")
+    cursor.execute("DELETE FROM tokens WHERE account IN (SELECT id FROM accounts WHERE last_login_timestamp < UNIX_TIMESTAMP() * 1000 - %s)", [DELETE_ACCOUNT_TIME])
+    cursor.execute("DELETE FROM accounts WHERE last_login_timestamp < UNIX_TIMESTAMP() * 1000 - %s", [DELETE_ACCOUNT_TIME])
+
+
+def maintain(cursor):
+    remove_unused_threads(cursor)
+    delete_old_tokens_accounts(cursor)
+    
+
+def async_maintain():
+    
+    def do_maintain():
+        sleep(10)
+        cursor_provider(maintain)()
+
+    threading.Thread(target=do_maintain).start()
+    
+
 def can_create_user(cursor, userhash, token=""):
     cursor.execute(f"SELECT can_create FROM users WHERE id = ({VALIDATE_ACCESS_QUERY})", [userhash, token])
     can_create, = cursor.fetchone()
@@ -233,7 +256,6 @@ def close_user(cursor, userhash, token=""):
         WHERE 
             id = %s
         """, [user_id, user_id])
-    remove_unused_threads(cursor)
     return result
 
 
@@ -244,7 +266,7 @@ def reset_user_hash(cursor, userhash, token=""):
             new_userhash = my_uuid()
             cursor.execute("UPDATE users SET hash = %s WHERE id = %s", [new_userhash, user_id])
             break
-        except:
+        except mysql.connector.IntegrityError as _:
             pass  
     if i == 255:
         return {"status": "error", "message": "Cannot set the hash"}
@@ -273,7 +295,7 @@ def add_user(cursor, create_on, username: str = None, can_create=True, token="")
             userhash = my_uuid()
             cursor.execute("INSERT INTO users (username, thread, hash, can_create) VALUES (%s, %s, %s, %s)", [username, thread_id, userhash, int(bool(can_create))])
             break
-        except:
+        except mysql.connector.IntegrityError as _:
             pass
     if i == 255:
         return {"status": "error", "message": "Cannot set the hash"}
@@ -314,78 +336,106 @@ def get_message(cursor, message_id):
     id, username, userhash, timestamp, content, system  = cursor.fetchone()
     return {"id": id, "username": username, "timestamp": timestamp, "content": markdown(content), "system": bool(system)}, userhash
     
+    
+def set_user_read(cursor, userhash):
+    cursor.execute("UPDATE users SET last_read_time = %s WHERE hash = %s", [get_timestamp(), userhash])
+    
+    
 def get_messages(cursor, userhash, offset=0, limit=64, id_bookmark=0, id_direction=0, excludeList=[], token=""):
     id_direction = int(id_direction)
     id_direction = id_direction if abs(id_direction) == 1 else 0
     id_bookmark = int(id_bookmark)
     limit = max(min(int(limit), 256), 0)
     offset = max(0, int(offset))
+    set_user_read(cursor, userhash)
     cursor.execute(f"""
         SELECT 
-            messages.id,
-            CASE messages.is_system WHEN 1 THEN "SYSTEM" ELSE users.username END,
-            users.hash = init_user.hash AND NOT messages.is_system AS me,
-            messages.timestamp,
-            messages.content,
-            messages.is_system
+            id,
+            sender,
+            me,
+            timestamp,
+            content,
+            is_system
         FROM 
-            users AS init_user
-        JOIN
-            threads ON (init_user.thread = threads.id)
-        JOIN 
-            users ON (users.thread = threads.id)
-        JOIN
-            messages ON (messages.user = users.id)
+            messages_view
         WHERE
-            init_user.id = ({VALIDATE_ACCESS_QUERY})
+            init_user_id = ({VALIDATE_ACCESS_QUERY})
         AND
         (            
             %s = 0
             OR
-                (messages.id > %s AND %s = 1)
+                (id > %s AND %s = 1)
             OR
-                (messages.id < %s AND %s = -1)
+                (id < %s AND %s = -1)
         )
         ORDER BY
-            messages.id * %s,
-            messages.id DESC
+            id * %s,
+            id DESC
         LIMIT {int(limit)}
         OFFSET {int(offset)}
         """, [userhash, token, id_direction, id_bookmark, id_direction, id_bookmark, id_direction, id_direction])
-    
     excludeSet = set(excludeList)
     return {"status": "ok", "messages": [{"id": id, "username": username, "me": bool(me), "timestamp": timestamp, "content": markdown(content), "system": bool(system)} for id, username, me, timestamp, content, system in cursor if id not in excludeSet]}
 
 
+def get_threads_with_token(cursor, token):
+    cursor.execute("""
+        SELECT
+            users.hash AS hash,
+            newest_user_message.timestamp > users.last_read_time AS unread
+        FROM
+            tokens
+        JOIN
+            accounts ON (tokens.account = accounts.id)
+        JOIN
+            users ON (users.account = accounts.id)
+        JOIN
+            newest_user_message ON (newest_user_message.id = users.id)
+        WHERE
+            token.hash = %s
+        """, [token])
+    return [{"userhash": userhash, "unread": bool(unread)} for userhash, unread in cursor]
+    
+
 def activity(cursor, token):
+    timestamp = get_timestamp()
     cursor.execute("SELECT COUNT(*) FROM valid_tokens WHERE hash = %s", [token])
     count, = cursor.fetchone()
-    cursor.execute("DELETE FROM tokens WHERE hash NOT IN (SELECT hash FROM valid_tokens)")
-    cursor.execute("UPDATE tokens SET last_activity_timestamp = %s WHERE hash = %s", [get_timestamp(), token])
+    if random() < MAINTAIN_PROBABILITY:
+        async_maintain()
+    if count > 0:
+        cursor.execute("UPDATE tokens SET last_activity_timestamp = %s WHERE hash = %s", [timestamp, token])    
+        cursor.execute("UPDATE accounts SET last_login_timestamp = %s WHERE id IN (SELECT account FROM valid_tokens WHERE hash = %s)", [timestamp, token])
     return {"status": "ok", "result": count>0}
 
 
 def login(cursor, login, password, no_activity_lifespan=3600, max_lifespan=604800):
-    cursor.execute("SELECT id, password FROM accounts WHERE login = %s LIMIT 1", [login])
+    cursor.execute("SELECT id, password FROM accounts WHERE login = %s LIMIT 1", [str(login)])
     try:
         account_id, password_hash, = cursor.fetchone()
     except TypeError as _:
         random_sleep()
         return {"status": "ok", "result": False}
     
-    if not bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8')):
+    if not bcrypt.checkpw(str(password).encode('utf-8'), password_hash.encode('utf-8')):
         random_sleep()
         return {"status": "ok", "result": False}
     
     random_sleep()
-    token = my_uuid()
     timestamp = get_timestamp()
-    cursor.execute("""
-        INSERT INTO tokens 
-            (hash, account, created_timestamp, last_activity_timestamp, no_activity_lifespan, max_lifespan)
-        VALUES 
-            (%s, %s, %s, %s, %s, %s, %s)""", 
-        [token, account_id, timestamp, timestamp, int(no_activity_lifespan), int(max_lifespan)])
+    for _ in range(256):
+        try:
+            token = my_uuid()
+            cursor.execute("""
+                INSERT INTO tokens 
+                    (hash, account, created_timestamp, last_activity_timestamp, no_activity_lifespan, max_lifespan)
+                VALUES 
+                    (%s, %s, %s, %s, %s, %s)""", 
+                [token, account_id, timestamp, timestamp, 1000*int(no_activity_lifespan), 1000*int(max_lifespan)])
+            break
+        except mysql.connector.IntegrityError as _:
+            pass
+    cursor.execute("UPDATE accounts SET last_login_timestamp = %s WHERE id = %s", [timestamp, account_id])
     return {"status": "ok", "result": True, "token": token}
 
 
@@ -395,6 +445,7 @@ def logout(cursor, token=""):
 
 
 def register(cursor, login, password):
-    password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt(13)).decode('utf-8')
-    cursor.execute("INSERT INTO users (login, password)", [login, password_hash])
+    password_hash = bcrypt.hashpw(str(password).encode('utf-8'), bcrypt.gensalt(13)).decode('utf-8')
+    delete_old_tokens_accounts(cursor)
+    cursor.execute("INSERT INTO accounts (login, password, last_login_timestamp) VALUES (%s, %s, %s)", [str(login), password_hash, get_timestamp() - DELETE_ACCOUNT_TIME + ACTIVATE_ACCOUNT_TIME])
     return {"status": "ok"}

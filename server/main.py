@@ -137,6 +137,21 @@ class Server:
         return messenger.get_messages(cursor, userhash, offset, limit, id_bookmark, id_direction, excludeList, token)
 
 
+    @decorator_pack
+    def login(self, cursor, login, password, no_activity_lifespan=3600, max_lifespan=604800):
+        return messenger.login(cursor, login, password, no_activity_lifespan=no_activity_lifespan, max_lifespan=max_lifespan)
+
+
+    @decorator_pack
+    def register(self, cursor, login, password):
+        return messenger.register(cursor, login, password)
+    
+
+    @decorator_pack
+    def logout(self, cursor, token=""):
+        return messenger.logout(cursor, token)
+
+
 class Root:
     
     @cherrypy.expose()
@@ -160,6 +175,8 @@ if __name__ == "__main__":
     cherrypy.config.update({"server.max_request_body_size": 1024*1024})
     cherrypy.tree.mount(Root(), '/', SERVER_CONFIG)
     cherrypy.tree.mount(Server(), '/query', SERVER_CONFIG)
+    
+    messenger.cursor_provider(messenger.maintain)()
     
     cherrypy.engine.start()
     cherrypy.engine.block()

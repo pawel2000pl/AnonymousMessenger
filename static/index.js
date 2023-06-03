@@ -4,6 +4,10 @@ const chatNameInput = document.getElementById('chat-name-input');
 const firstUserInput = document.getElementById('first-user-input');
 const joinChatBtn = document.getElementById('join-chat-btn');
 const userHashInput = document.getElementById('userhash-input');
+const accountLogin = document.getElementById('account-login');
+const accountPassword = document.getElementById('account-password');
+const loginBtn = document.getElementById('login-btn');
+const registerBtn = document.getElementById('register-btn');
 
 chatNameInput.addEventListener('keypress', (event)=>{
     if (event.key == "Enter") 
@@ -60,4 +64,53 @@ joinChatBtn.addEventListener('click', async ()=>{
     let params = new URLSearchParams();
     params.append('userhash', userhash);
     window.location = window.location.origin + "/messages.html?" + params.toString();
+});
+
+accountLogin.addEventListener('keypress', (event)=>{
+    if (event.key == "Enter") 
+        accountPassword.focus();
+});
+
+accountPassword.addEventListener('keypress', (event)=>{
+    if (event.key == "Enter") 
+        loginBtn.click();
+});
+
+loginBtn.addEventListener('click', async ()=>{
+    let response = await fetch('/query/login', {
+        method: "post",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            login: accountLogin.value,
+            password: accountPassword.value
+        }),
+    });
+    let result = await response.json();
+    if (result['status'] != "ok" || (!result['result'])) {
+        alert('Invalid user and / or password');
+        return;
+    }
+    localStorage.token = result['token'];
+    window.location.href = window.location.origin + "/account.html";
+});
+
+registerBtn.addEventListener('click', async ()=>{
+    let response = await fetch('/query/register', {
+        method: "post",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            login: accountLogin.value,
+            password: accountPassword.value
+        }),
+    });
+    let result = await response.json();
+    if (result['status'] != "ok") {
+        alert('Cannot create the user - try another username');
+        return;
+    }
+    alert('User created. Login within 5 minutes to confirm the registration');
 });

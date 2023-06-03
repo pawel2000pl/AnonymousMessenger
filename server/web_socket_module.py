@@ -14,6 +14,7 @@ def propagate_message(cursor, thread_id, message_id):
     for ws in SUBSCRIBTIONS[thread_id]:
         msg['me'] = userhash == ws.userhash
         ws.send(TextMessage(json.dumps({"action": "new_message", "messages": [msg]})))
+        messenger.set_user_read(cursor, ws.userhash)
     
     for ws, ident in NOTIFY_SUBSCRIBTION[thread_id]:
         ws.send(TextMessage(json.dumps({"action": "new_message", "userhash": ident})))
