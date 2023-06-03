@@ -20,7 +20,11 @@ const translateAll = function() {
 const init = async function() {
     const result = await fetch("/translates.json");
     const data = await result.json();
-    dataLanguage = data[navigator.language]??{};
+    for (let i=0;i<navigator.languages.length;i++)
+        if (data[navigator.languages[i]]) {
+        dataLanguage = data[navigator.languages[i]];
+        break;
+    }
 };
 
 var translatorPromise = init().then(translateAll);
