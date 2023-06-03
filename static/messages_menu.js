@@ -26,7 +26,7 @@ newUserBtn.addEventListener('click', async ()=>{
         newUserOutput.value = result['userhash'];
         newUserOutputHref.value = window.location.origin + "/messages.html?userhash="+result['userhash'];
     } else
-        alert('Cannot generate the new user');
+        alert(translate('Cannot generate the new user'));
 });
 
 const checkCanCreate = async function() {
@@ -62,11 +62,11 @@ changeUserhashBtn.addEventListener('click', async ()=>{
     if (result['status'] == "ok") {
         window.location = window.location.origin + "/messages.html?userhash="+result['userhash'];
     } else
-        alert('Cannot generate the new user');
+        alert(translate('Cannot generate the new user'));
 });
 
 closeUserBtn.addEventListener('click', async ()=>{
-    if (!confirm("Are you sure that you want to leave this chat?"))
+    if (!confirm(translate("Are you sure that you want to leave this chat?")))
         return;
     let response = await fetch('/query/close_user', {
         method: "post",
@@ -82,5 +82,5 @@ closeUserBtn.addEventListener('click', async ()=>{
     if (result['status'] == "ok") {        
         window.location = window.location.origin;
     } else
-        alert('Cannot remove the user');
+        alert(translate('Cannot remove the user'));
 });

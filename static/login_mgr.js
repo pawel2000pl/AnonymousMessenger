@@ -14,7 +14,8 @@ const ensureAccessIsValid = async function() {
     });
     let result = await response.json();
     if (result['status'] != "ok" || (!result['result'])) {
-        alert('Acces data is invalid');
+        await translatorPromise;
+        alert(translate('Acces data is invalid'));
         window.location = window.location.origin;
     }
 };
@@ -40,5 +41,5 @@ const checkToken = async function() {
     }
 };
 
-var permissionChecks = checkToken(false).then(()=>{return ensureAccessIsValid();});
+var permissionChecks = checkToken(false);
 setInterval(checkToken, 60000);

@@ -134,7 +134,7 @@ const sendMessage = async function() {
             messageOffset = 0;
             messagesList.scrollTop = messagesList.scrollHeight;
         } else 
-            alert("Cannot send the message");
+            alert(translate("Cannot send the message"));
     } finally {
         messageEditor.disabled = "";
     }
@@ -265,4 +265,4 @@ window.addEventListener('beforeunload', ()=>{
     ws.close()
 });
 
-permissionChecks.then(connectWS);
+permissionChecks.then(ensureAccessIsValid).then(connectWS);
