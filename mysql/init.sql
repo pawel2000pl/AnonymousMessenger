@@ -108,13 +108,24 @@ CREATE VIEW messages_view AS
 
 CREATE TABLE errors (
     timestamp BIGINT,
+    readable_timestamp TEXT AS (FROM_UNIXTIME(timestamp/1000)) VIRTUAL,
     message LONGTEXT
 );
 
 CREATE INDEX errors_timestamp ON errors(timestamp);
 
+CREATE VIEW short_errors AS
+    SELECT 
+        readable_timestamp, 
+        LEFT(message, IFNULL(NULLIF(LOCATE("\n", message), 0), 64)-1)
+    FROM 
+        errors
+    ORDER BY
+        timestamp;
+
 CREATE TABLE statistics (
     timestamp BIGINT,
+    readable_timestamp TEXT AS (FROM_UNIXTIME(timestamp/1000)) VIRTUAL,
     time float,
     ident varchar(16)
 );
