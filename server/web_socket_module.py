@@ -2,6 +2,7 @@ import cherrypy
 import messenger
 import json
 
+from messenger_logs import log_statistic
 from collections import defaultdict
 from ws4py.websocket import WebSocket
 from ws4py.messaging import TextMessage
@@ -9,6 +10,7 @@ from ws4py.messaging import TextMessage
 SUBSCRIBTIONS = defaultdict(set)
 NOTIFY_SUBSCRIBTION = defaultdict(set)
 
+@log_statistic
 def propagate_message(cursor, thread_id, message_id):
     msg, userhash = messenger.get_message(cursor, message_id)
     for ws in SUBSCRIBTIONS[thread_id]:

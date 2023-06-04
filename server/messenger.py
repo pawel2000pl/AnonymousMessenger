@@ -1,7 +1,6 @@
 import mysql.connector
 import bcrypt
 import os
-import threading
 
 from hashlib import sha256
 from random import random
@@ -28,6 +27,7 @@ DATABASE_NAME = os.getenv("DATABASE_NAME")
 DATABASE_USER = os.getenv("DATABASE_USER")
 DATABASE_PASS = os.getenv("DATABASE_PASS")
 DATABASE_POTR = os.getenv("DATABASE_PORT", "3306")
+AES_KEY = os.getenv("AES_KEY", "4ea040749715201f3fb0352b41eea15e5ad969508701eb25401770ff0cefaa97")
 
 
 def get_database_connection():
@@ -140,7 +140,7 @@ def send_message(cursor, userhash, content, system_message=False, token=""):
         SELECT
             id,
             %s, 
-            %s, 
+            AES_ENCRYPT(COMPRESS(%s), %s), 
             %s 
         FROM
             users
@@ -149,7 +149,7 @@ def send_message(cursor, userhash, content, system_message=False, token=""):
         AND 
             users.closed = 0
         LIMIT 1
-        """, [get_timestamp(), str(content), sysMsg, userhash, token])
+        """, [get_timestamp(), str(content).encode('utf-8'), AES_KEY, sysMsg, userhash, token])
     return {"status": "ok", "message_id": cursor.lastrowid}
 
 
@@ -205,15 +205,6 @@ def delete_old_tokens_accounts(cursor):
 def maintain(cursor):
     remove_unused_threads(cursor)
     delete_old_tokens_accounts(cursor)
-    
-
-def async_maintain():
-    
-    def do_maintain():
-        sleep(10)
-        cursor_provider(maintain)()
-
-    threading.Thread(target=do_maintain).start()
     
 
 def can_create_user(cursor, userhash, token=""):
@@ -323,7 +314,7 @@ def get_message(cursor, message_id):
             CASE messages.is_system WHEN 1 THEN "SYSTEM" ELSE users.username END,
             CASE messages.is_system WHEN 1 THEN "__SYSTEM_HASH__" ELSE users.hash END AS hash,
             messages.timestamp,
-            messages.content,
+            UNCOMPRESS(AES_DECRYPT(messages.content, %s)),
             messages.is_system
         FROM
             messages
@@ -332,9 +323,9 @@ def get_message(cursor, message_id):
         WHERE 
             messages.id = %s
         LIMIT 1
-        """, [message_id])
+        """, [AES_KEY, message_id])
     id, username, userhash, timestamp, content, system  = cursor.fetchone()
-    return {"id": id, "username": username, "timestamp": timestamp, "content": markdown(content), "system": bool(system)}, userhash
+    return {"id": id, "username": username, "timestamp": timestamp, "content": markdown(content.decode('utf-8')), "system": bool(system)}, userhash
     
     
 def set_user_read(cursor, userhash):
@@ -353,8 +344,8 @@ def get_messages(cursor, userhash, offset=0, limit=64, id_bookmark=0, id_directi
             id,
             sender,
             me,
-            timestamp,
-            content,
+            timestamp,            
+            UNCOMPRESS(AES_DECRYPT(content, %s)),
             is_system
         FROM 
             messages_view
@@ -373,9 +364,9 @@ def get_messages(cursor, userhash, offset=0, limit=64, id_bookmark=0, id_directi
             id DESC
         LIMIT {int(limit)}
         OFFSET {int(offset)}
-        """, [userhash, token, id_direction, id_bookmark, id_direction, id_bookmark, id_direction, id_direction])
+        """, [AES_KEY, userhash, token, id_direction, id_bookmark, id_direction, id_bookmark, id_direction, id_direction])
     excludeSet = set(excludeList)
-    return {"status": "ok", "messages": [{"id": id, "username": username, "me": bool(me), "timestamp": timestamp, "content": markdown(content), "system": bool(system)} for id, username, me, timestamp, content, system in cursor if id not in excludeSet]}
+    return {"status": "ok", "messages": [{"id": id, "username": username, "me": bool(me), "timestamp": timestamp, "content": markdown(content.decode('utf-8')), "system": bool(system)} for id, username, me, timestamp, content, system in cursor if id not in excludeSet]}
 
 
 def get_threads_with_token(cursor, token):
@@ -401,8 +392,6 @@ def activity(cursor, token):
     timestamp = get_timestamp()
     cursor.execute("SELECT COUNT(*) FROM valid_tokens WHERE hash = %s", [token])
     count, = cursor.fetchone()
-    if random() < MAINTAIN_PROBABILITY:
-        async_maintain()
     if count > 0:
         cursor.execute("UPDATE tokens SET last_activity_timestamp = %s WHERE hash = %s", [timestamp, token])    
         cursor.execute("UPDATE accounts SET last_login_timestamp = %s WHERE id IN (SELECT account FROM valid_tokens WHERE hash = %s)", [timestamp, token])

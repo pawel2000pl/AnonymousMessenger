@@ -34,8 +34,7 @@ CREATE TABLE tokens (
 );
 
 CREATE INDEX tokens_accounts ON tokens (account);
-CREATE INDEX tokens_created ON tokens (created_timestamp);
-CREATE INDEX tokens_activity ON tokens (last_activity_timestamp);
+CREATE INDEX tokens_timestamps ON tokens (created_timestamp, last_activity_timestamp);
 
 CREATE VIEW valid_tokens AS 
     SELECT 
@@ -75,12 +74,13 @@ CREATE TABLE users (
 
 CREATE UNIQUE INDEX users_names ON users (thread, username(64));
 CREATE UNIQUE INDEX users_hash ON users (hash);
+CREATE INDEX users_account ON users (account);
 
 CREATE TABLE messages (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY ,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user BIGINT,
     timestamp BIGINT NOT NULL DEFAULT 0,
-    content LONGTEXT,
+    content LONGBLOB,
     is_system TINYINT NOT NULL DEFAULT 0,
     FOREIGN KEY (user) REFERENCES users (id),
     CHECK(content IS NOT NULL AND LENGTH(content) > 0 AND LENGTH(content) < 262144)
@@ -120,3 +120,31 @@ CREATE VIEW messages_view AS
         users ON (users.thread = threads.id)
     JOIN
         messages ON (messages.user = users.id);
+
+CREATE TABLE errors (
+    timestamp BIGINT,
+    message LONGTEXT
+);
+
+CREATE INDEX errors_timestamp ON errors(timestamp);
+
+CREATE TABLE statistics (
+    timestamp BIGINT,
+    time float,
+    ident varchar(16)
+);
+
+CREATE INDEX statistics_timestamp ON statistics(timestamp);
+
+CREATE VIEW agregated_statistics AS
+    SELECT 
+        ident,
+        COUNT(*) AS exec_count,
+        AVG(time) AS aver,
+        MIN(time) AS minimum,
+        MAX(time) AS maximum,
+        STD(time) AS std
+    FROM
+        statistics
+    GROUP BY
+        ident;

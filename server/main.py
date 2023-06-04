@@ -3,6 +3,8 @@ import json
 import messenger
 import os
 
+from tasks import Task
+from messenger_logs import log_error, log_statistic, save_logs
 from functools import wraps
 from web_socket_module import ChatWebSocketHandler, NotifyWebSocketHandler, propagate_message
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
@@ -10,6 +12,11 @@ from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 MY_PATH = os.path.dirname(os.path.abspath(__file__)) + "/"
 STATIC_PATH = MY_PATH + '../static/'
 ERROR_RESPONSE = json.dumps({"status": "error"}).encode("utf-8")
+TRNASLATES = json.loads(open(STATIC_PATH+"translates.json").read())
+LANGUAGES_LIST = list(TRNASLATES.keys())
+
+for k in LANGUAGES_LIST:
+    TRNASLATES[k]["__supported_languages__"] = LANGUAGES_LIST
 
 SERVER_CONFIG = \
     {
@@ -53,6 +60,7 @@ def unpackCherryPyJson(fun):
         try:
             return json.dumps(fun(*args, **kwargs)).encode("utf-8")
         except Exception as err:
+            log_error(err)
             cherrypy.log(err)
             return ERROR_RESPONSE
 
@@ -61,6 +69,7 @@ def unpackCherryPyJson(fun):
 def decorator_pack(fun):
     
     @cherrypy.expose()
+    @log_statistic
     @unpackCherryPyJson
     @messenger.cursor_provider
     @wraps(fun)
@@ -70,6 +79,23 @@ def decorator_pack(fun):
     return decorator
 
 class Server:
+    
+    
+    @cherrypy.expose()
+    @unpackCherryPyJson
+    def get_translations(self, languages="en", *args, **kwargs):
+        languages = str(languages).split(";")
+        for language in languages:
+            if language in TRNASLATES:
+                return TRNASLATES[language]
+        return TRNASLATES.get("en", dict())
+    
+    
+    @cherrypy.expose()
+    @unpackCherryPyJson
+    def get_translation_keys(self, *args, **kwargs):
+        return LANGUAGES_LIST
+    
     
     @cherrypy.expose()
     @unpackCherryPyJson
@@ -172,11 +198,15 @@ if __name__ == "__main__":
     if os.getenv("PRODUCTION") == "TRUE":
         cherrypy.config.update({'global': {'environment' : 'production'}})
         cherrypy.log.screen = True
-    cherrypy.config.update({"server.max_request_body_size": 1024*1024})
+    cherrypy.config.update({"server.max_request_body_size": 256*1024})
     cherrypy.tree.mount(Root(), '/', SERVER_CONFIG)
     cherrypy.tree.mount(Server(), '/query', SERVER_CONFIG)
     
-    messenger.cursor_provider(messenger.maintain)()
-    
+    task = Task(cherrypy.engine, messenger.cursor_provider(messenger.maintain), 3600)
+    task.subscribe()
+    task = Task(cherrypy.engine, save_logs, 30)
+    task.subscribe()
+
     cherrypy.engine.start()
     cherrypy.engine.block()
+    

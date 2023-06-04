@@ -18,13 +18,10 @@ const translateAll = function() {
 };
 
 const init = async function() {
-    const result = await fetch("/translates.json");
-    const data = await result.json();
-    for (let i=0;i<navigator.languages.length;i++)
-        if (data[navigator.languages[i]]) {
-        dataLanguage = data[navigator.languages[i]];
-        break;
-    }
+    const urlParams = new URLSearchParams();
+    urlParams.append('languages', navigator.languages.join(";"));
+    const result = await fetch("/query/get_translations?"+urlParams.toString());
+    dataLanguage = await result.json();
 };
 
 var translatorPromise = init().then(translateAll);
