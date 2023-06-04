@@ -16,7 +16,6 @@ def propagate_message(cursor, thread_id, message_id):
     for ws in SUBSCRIBTIONS[thread_id]:
         msg['me'] = userhash == ws.userhash
         ws.send(TextMessage(json.dumps({"action": "new_message", "messages": [msg]})))
-        messenger.set_user_read(cursor, ws.userhash)
     
     for ws, ident in NOTIFY_SUBSCRIBTION[thread_id]:
         ws.send(TextMessage(json.dumps({"action": "new_message", "userhash": ident})))
@@ -47,6 +46,10 @@ class ChatWebSocketHandler(WebSocket):
             connection.commit()
             if sent_result['status'] == "ok":
                 propagate_message(connection.cursor(), self.thread_id, sent_result['message_id'])
+                
+        if action == 'set_as_readed':
+            messenger.set_user_read(cursor, self.userhash, self.token)
+            connection.commit()
             
         if action == 'get_messages' or action == 'get_newest':
             text = content.get('message', '')

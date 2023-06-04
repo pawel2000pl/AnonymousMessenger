@@ -8,6 +8,8 @@ const accountLogin = document.getElementById('account-login');
 const accountPassword = document.getElementById('account-password');
 const loginBtn = document.getElementById('login-btn');
 const registerBtn = document.getElementById('register-btn');
+const loginDiv = document.getElementById('login-div');
+const chatListDiv = document.getElementById('chat-list-div');
 
 chatNameInput.addEventListener('keypress', (event)=>{
     if (event.key == "Enter") {
@@ -37,7 +39,7 @@ createNewChatBtn.addEventListener('click', async ()=>{
     });
     response = await response.json();
     if (response.status != "ok") {
-        alert("Error occured");
+        alert(translate("Error occured"));
         return;
     }
     window.location.href = window.location.origin + "/messages.html?userhash="+response.userhash;
@@ -64,7 +66,7 @@ joinChatBtn.addEventListener('click', async ()=>{
     });
     let result = await response.json();
     if (result['status'] != "ok" || (!result['result'])) {
-        alert('Acces data is invalid');
+        alert(translate('Acces data is invalid'));
         return;
     }
     let params = new URLSearchParams();
@@ -103,7 +105,7 @@ loginBtn.addEventListener('click', async ()=>{
         return;
     }
     localStorage.token = result['token'];
-    window.location.href = window.location.origin + "/account.html";
+    window.location.href = window.location.origin + "/";
 });
 
 registerBtn.addEventListener('click', async ()=>{
@@ -122,5 +124,15 @@ registerBtn.addEventListener('click', async ()=>{
         alert('Cannot create the user - try another username');
         return;
     }
-    alert('User created. Login within 5 minutes to confirm the registration');
+    alert(translate('User created. Login within 5 minutes to confirm the registration'));
+});
+
+permissionChecks.then(()=>{
+    if (localStorage.token) {
+        loginDiv.style.display = "none";
+        chatListDiv.style.display = "";
+    } else {
+        loginDiv.style.display = "";
+        chatListDiv.style.display = "none";
+    }
 });

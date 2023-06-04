@@ -15,7 +15,6 @@ MAX_USERNAME_LENGTH = 255
 DELETE_THREAD_TIME = 1000 * 3600 * 24 * 365
 DELETE_ACCOUNT_TIME = 1000 * 3600 * 24 * 365 * 3
 ACTIVATE_ACCOUNT_TIME = 1000 * 60 * 5
-MAINTAIN_PROBABILITY = 1e-2
 
 CHANGES_USERNAME_MESSSAGE = "User *%s* has changed its nick to *%s*"
 CLOSE_USERNAME_MESSSAGE = "User *%s* has left from the chat"
@@ -328,9 +327,10 @@ def get_message(cursor, message_id):
     return {"id": id, "username": username, "timestamp": timestamp, "content": markdown(content.decode('utf-8')), "system": bool(system)}, userhash
     
     
-def set_user_read(cursor, userhash):
-    cursor.execute("UPDATE users SET last_read_time = %s WHERE hash = %s", [get_timestamp(), userhash])
-    
+def set_user_read(cursor, userhash, token=""):
+    cursor.execute(f"UPDATE users SET last_read_time = %s WHERE id = ({VALIDATE_ACCESS_QUERY})", [get_timestamp(), userhash, token])
+    return {"status": "ok"}
+
     
 def get_messages(cursor, userhash, offset=0, limit=64, id_bookmark=0, id_direction=0, excludeList=[], token=""):
     id_direction = int(id_direction)
@@ -338,7 +338,6 @@ def get_messages(cursor, userhash, offset=0, limit=64, id_bookmark=0, id_directi
     id_bookmark = int(id_bookmark)
     limit = max(min(int(limit), 256), 0)
     offset = max(0, int(offset))
-    set_user_read(cursor, userhash)
     cursor.execute(f"""
         SELECT 
             id,
@@ -372,8 +371,12 @@ def get_messages(cursor, userhash, offset=0, limit=64, id_bookmark=0, id_directi
 def get_threads_with_token(cursor, token):
     cursor.execute("""
         SELECT
+            threads.name,
+            users.username AS username,
             users.hash AS hash,
-            newest_user_message.timestamp > users.last_read_time AS unread
+            CAST(SUM(IF(messages_view.timestamp > last_read_time, 1, 0)) AS INTEGER) AS unread,
+            MAX(messages_view.timestamp) AS last_message_timestamp,
+            users.last_read_time AS last_read_time
         FROM
             tokens
         JOIN
@@ -381,11 +384,15 @@ def get_threads_with_token(cursor, token):
         JOIN
             users ON (users.account = accounts.id)
         JOIN
-            newest_user_message ON (newest_user_message.id = users.id)
+            messages_view ON (messages_view.init_user_id = users.id)
+        JOIN
+            threads ON (users.thread = threads.id)
         WHERE
-            token.hash = %s
+            tokens.hash = %s
+        GROUP BY
+            users.id
         """, [token])
-    return [{"userhash": userhash, "unread": bool(unread)} for userhash, unread in cursor]
+    return {"status": "ok", "result": [{"thread_name": thread_name, "username": username, "userhash": userhash, "unread": unread, "last_message_timestamp": last_message_timestamp, "last_read_time": last_read_time} for thread_name, username, userhash, unread, last_message_timestamp, last_read_time in cursor]}
     
 
 def activity(cursor, token):

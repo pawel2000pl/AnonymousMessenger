@@ -35,9 +35,9 @@ const createMessageCloud = function(messageData) {
     header.className = "message-header " + (messageData.me?"my-message-header":"regular-message-header");
     if (messageData.system)
         header.innerHTML = "<i>System</i>";
-    let date = new Date(messageData.timestamp) 
-    timestamp.className = "message-timestamp " + (messageData.me?"my-messege-timestamp":"regular-message-timestamp");
+    let date = new Date(messageData.timestamp); 
     timestamp.innerText = date.toLocaleString();
+    timestamp.className = "message-timestamp " + (messageData.me?"my-messege-timestamp":"regular-message-timestamp");
     message.appendChild(header);
     message.appendChild(hr);
     message.appendChild(content);
@@ -55,7 +55,7 @@ const setToArray = function(set) {
     return result;
 }
 
-function realHeigh(el) {
+function realHeight(el) {
     el = (typeof el === 'string') ? document.querySelector(el) : el; 
   
     var styles = window.getComputedStyle(el);
@@ -70,7 +70,7 @@ const addMessages = function(newMessagesList){
     let currentHeight = 0;
     let halfIndex = 0;
     for (let i=0;i<messagesList.children.length;i++) 
-        if (halfHeight <= currentHeight && halfHeight >= currentHeight + realHeigh(messagesList.children[i])) {
+        if (halfHeight <= currentHeight && halfHeight >= currentHeight + realHeight(messagesList.children[i])) {
             halfIndex = i;
             break;
         }
@@ -89,7 +89,7 @@ const addMessages = function(newMessagesList){
                 messagesList.appendChild(newCloud);
             else if (messagesList.firstElementChild.data.timestamp > newMessagesList[i].timestamp) {
                 messagesList.insertBefore(newCloud, messagesList.firstElementChild);
-                scrollTopOffset += realHeigh(newCloud);
+                scrollTopOffset += realHeight(newCloud);
                 halfIndex++;
                 addedBefore++;
             }
@@ -98,7 +98,7 @@ const addMessages = function(newMessagesList){
                     if (messagesList.children[j-1].data.timestamp < newMessagesList[i].timestamp && messagesList.children[j].data.timestamp > newMessagesList[i].timestamp) {
                         messagesList.insertBefore(newCloud, messagesList.children[j]);
                         if (j < halfIndex) {
-                            scrollTopOffset += realHeigh(newCloud);
+                            scrollTopOffset += realHeight(newCloud);
                             halfIndex++;
                             addedBefore++;
                         }
@@ -150,8 +150,11 @@ messageEditor.addEventListener('keypress', (event)=>{
 });
 
 const setNewMessageAsReaded = function() {
-    if (messagesList.scrollTop >= messagesList.scrollHeight-messagesList.clientHeight-1)
+    if (messagesList.scrollTop >= messagesList.scrollHeight-messagesList.clientHeight-1) {
+        if (isNewMessage)
+            ws.send(JSON.stringify({"action": "set_as_readed"}));
         isNewMessage = false;
+    }
 };
 
 messagesList.addEventListener('scroll', setNewMessageAsReaded);
@@ -249,12 +252,16 @@ const connectWS = function () {
             if (playSound) {
                 notification.play();
                 isNewMessage = true;
+            } else {
+                ws.send(JSON.stringify({"action": "set_as_readed"}));
             }
         }
         if (data.action == "ordered_messages") {
             addMessages(messages);
-            if (data.newest) 
+            if (data.newest) {
                 messagesList.scrollTop = messagesList.scrollHeight;
+                ws.send(JSON.stringify({"action": "set_as_readed"}));
+            }
         }
     };
     ws.onclose = ()=>{setTimeout(connectWS, MESSAGE_SYNC_INTERVAL)};

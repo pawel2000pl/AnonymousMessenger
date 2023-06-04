@@ -273,3 +273,30 @@ hr {
     font-weight: bold;
     z-index: 1;
 }
+
+.chat-list-table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.chat-list-table th {
+    background-color: rgb(58, 58, 58);
+}
+
+.chat-list-table td, .chat-list-table tr {
+    border: 1px solid rgb(81, 81, 81);
+    padding: 8px;
+    cursor: pointer;
+}
+
+.chat-list-table tr:nth-child(even){background-color: rgb(26, 26, 26);}
+.chat-list-table tr:hover {background-color: rgb(36, 36, 36)}
+
+.class-list-row-unread {
+    font-weight: bold;
+}
+
+.chat-list-cell a {
+    color: inherit;
+    text-decoration: inherit;
+}

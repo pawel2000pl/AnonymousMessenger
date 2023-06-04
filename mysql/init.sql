@@ -88,21 +88,6 @@ CREATE TABLE messages (
 
 CREATE UNIQUE INDEX messages_index ON messages (user, timestamp);
 
-CREATE VIEW newest_user_message AS
-    SELECT 
-        init_user.id AS id,
-        IFNULL(MAX(messages.timestamp), 0) AS timestamp
-    FROM 
-        users AS init_user
-    JOIN 
-        threads ON (init_user.thread = threads.id)
-    JOIN 
-        users ON (users.thread = threads.id)
-    JOIN
-        messages ON (messages.user = users.id)
-    GROUP BY
-        init_user.id;
-
 CREATE VIEW messages_view AS
     SELECT 
         init_user.id AS init_user_id,

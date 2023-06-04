@@ -2,6 +2,7 @@ import cherrypy
 import json
 import messenger
 import os
+import traceback
 
 from tasks import Task
 from messenger_logs import log_error, log_statistic, save_logs
@@ -16,7 +17,16 @@ TRNASLATES = json.loads(open(STATIC_PATH+"translates.json").read())
 LANGUAGES_LIST = list(TRNASLATES.keys())
 
 for k in LANGUAGES_LIST:
+    keyList = list(TRNASLATES[k].keys())
+    keyList.sort()
+    TRNASLATES[k] = {k2: TRNASLATES[k][k2] for k2 in keyList}
+
+with open(STATIC_PATH+"translates.json", "w") as f:
+    f.write(json.dumps(TRNASLATES, indent=4))
+    
+for k in LANGUAGES_LIST:
     TRNASLATES[k]["__supported_languages__"] = LANGUAGES_LIST
+
 
 SERVER_CONFIG = \
     {
@@ -60,7 +70,7 @@ def unpackCherryPyJson(fun):
         try:
             return json.dumps(fun(*args, **kwargs)).encode("utf-8")
         except Exception as err:
-            log_error(err)
+            log_error(str(err) + "\n\n" + str().join(traceback.TracebackException.from_exception(err).format()))
             cherrypy.log(err)
             return ERROR_RESPONSE
 
@@ -142,7 +152,7 @@ class Server:
     
     @decorator_pack
     def can_create_user(self, cursor, userhash, token=""):
-        return messenger.can_create_user(cursor, userhash, token="")
+        return messenger.can_create_user(cursor, userhash, token=token)
     
     
     @decorator_pack
@@ -161,6 +171,11 @@ class Server:
     @decorator_pack
     def get_messages(self, cursor, userhash, offset=0, limit=100, id_bookmark=0, id_direction=0, excludeList=[], token=""):
         return messenger.get_messages(cursor, userhash, offset, limit, id_bookmark, id_direction, excludeList, token)
+
+
+    @decorator_pack
+    def get_threads_with_token(self, cursor, token):
+        return messenger.get_threads_with_token(cursor, token)
 
 
     @decorator_pack
@@ -206,6 +221,7 @@ if __name__ == "__main__":
     task.subscribe()
     task = Task(cherrypy.engine, save_logs, 30)
     task.subscribe()
+    log_error("Server started")
 
     cherrypy.engine.start()
     cherrypy.engine.block()

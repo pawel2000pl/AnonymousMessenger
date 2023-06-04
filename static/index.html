@@ -7,26 +7,10 @@
         
         <table class="table-division-2">
             <tr>
-                <td class="table-division-left-cell" style="width: 50%;">
+                <td class="table-division-left-cell" >
 
-                    <h2 class="translatable">Join to the existing chat</h2>
-
-                    <div class="darkest-background" style="text-align: left; margin-top: 5px; margin-left: auto;">
-                        <form>
-                            <label for="userhash-input" class="translatable">User hash</label>
-                            <br>
-                            <input id="userhash-input" type="text" value="" style="width: 350px;">
-                            <br>
-                            <br>
-                            <input id="join-chat-btn" class="translatable black-button" type="button" value="Join">
-                        </form>
-                    </div>
-
-                    <br><hr>
-
-                    <h2 class="translatable">Create new chat</h2>
-
-                    <div class="darkest-background" style="text-align: left; margin-top: 5px; margin-left: auto;">
+                    <div class="darkest-background" style="text-align: right; margin-top: 5px; margin-left: auto;">
+                        <h2 class="translatable">Create new chat</h2>
                         <form>
                             <label for="chat-name-input" class="translatable">Chat name</label>
                             <br>
@@ -41,14 +25,27 @@
                             <input id="create-new-chat-btn" class="translatable black-button" type="button" value="Create">
                         </form>
                     </div>
+
+                    <br><hr>
+
+                    <div class="darkest-background" style="text-align: right; margin-top: 5px; margin-left: auto;">
+                        <h2 class="translatable">Join to the existing chat</h2>
+                        <form>
+                            <label for="userhash-input" class="translatable">User hash</label>
+                            <br>
+                            <input id="userhash-input" type="text" value="" style="width: 350px;">
+                            <br>
+                            <br>
+                            <input id="join-chat-btn" class="translatable black-button" type="button" value="Join">
+                        </form>
+                    </div>
                 </td>
                 <td class="table-division-divider">
                 </td>
                 <td class="table-division-right-cell">
 
-                    <h2 class="translatable">Sign in / up</h2>
-
-                    <div class="darkest-background" style="text-align: right; margin-top: 5px; margin-right: auto;">
+                    <div id="login-div" class="darkest-background" style="display: none; text-align: left; margin-top: 5px; margin-right: auto;">
+                        <h2 class="translatable">Sign in / up</h2>
                         <form>
                             <label for="account-login" class="translatable">Account ID</label>
                             <br>
@@ -65,6 +62,13 @@
                         </form>
                     </div>
 
+                    <div id="chat-list-div" class="darkest-background" style="display: none; text-align: left; margin-top: 5px; margin-right: auto;">
+                        <h2 class="translatable">Chat list</h2>
+                        <div id="chat-list">
+
+                        </div>
+                    </div>
+
                 </td>
             </tr>
         </table>
@@ -72,5 +76,6 @@
     </body>
     <script src="translator.js"></script>
     <script src="login_mgr.js"></script>
+    <script src="chat_list.js"></script>
     <script src="index.js"></script>
 </html>
