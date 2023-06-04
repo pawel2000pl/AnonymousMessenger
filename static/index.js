@@ -10,13 +10,17 @@ const loginBtn = document.getElementById('login-btn');
 const registerBtn = document.getElementById('register-btn');
 
 chatNameInput.addEventListener('keypress', (event)=>{
-    if (event.key == "Enter") 
+    if (event.key == "Enter") {
+        event.preventDefault()
         firstUserInput.focus();
+    }
 });
 
 firstUserInput.addEventListener('keypress', (event)=>{
-    if (event.key == "Enter") 
-    createNewChatBtn.click();
+    if (event.key == "Enter") {
+        event.preventDefault()
+        createNewChatBtn.click();
+    }
 });
 
 createNewChatBtn.addEventListener('click', async ()=>{
@@ -40,8 +44,10 @@ createNewChatBtn.addEventListener('click', async ()=>{
 });
 
 userHashInput.addEventListener('keypress', (event)=>{
-    if (event.key == "Enter") 
+    if (event.key == "Enter") {
+        event.preventDefault()
         joinChatBtn.click();
+    }
 });
 
 joinChatBtn.addEventListener('click', async ()=>{
@@ -67,13 +73,17 @@ joinChatBtn.addEventListener('click', async ()=>{
 });
 
 accountLogin.addEventListener('keypress', (event)=>{
-    if (event.key == "Enter") 
+    if (event.key == "Enter") {
+        event.preventDefault()
         accountPassword.focus();
+    }
 });
 
 accountPassword.addEventListener('keypress', (event)=>{
-    if (event.key == "Enter") 
+    if (event.key == "Enter") {
+        event.preventDefault()
         loginBtn.click();
+    }
 });
 
 loginBtn.addEventListener('click', async ()=>{
