@@ -21,7 +21,6 @@ CREATE TABLE accounts (
 );
 
 CREATE UNIQUE INDEX accounts_logins ON accounts (login(16));
-CREATE INDEX accounts_login_timestamp ON accounts (last_login_timestamp);
 
 CREATE TABLE tokens (
     hash VARCHAR(64) PRIMARY KEY,
@@ -123,24 +122,29 @@ CREATE VIEW short_errors AS
     ORDER BY
         timestamp;
 
-CREATE TABLE statistics (
-    timestamp BIGINT,
-    readable_timestamp TEXT AS (FROM_UNIXTIME(timestamp/1000)) VIRTUAL,
-    time float,
-    ident varchar(16)
+CREATE TABLE statistic_hist (
+    duration INTEGER,
+    ident varchar(16),
+    `count` BIGINT DEFAULT 0
 );
+
+CREATE UNIQUE INDEX statistic_hist_index ON statistic_hist (duration, ident);
 
 CREATE INDEX statistics_timestamp ON statistics(timestamp);
 
 CREATE VIEW agregated_statistics AS
     SELECT 
         ident,
+        COUNT(*) * AVG(duration) AS total,
         COUNT(*) AS exec_count,
-        AVG(time) AS aver,
-        MIN(time) AS minimum,
-        MAX(time) AS maximum,
-        STD(time) AS std
+        AVG(duration) AS aver,
+        MIN(duration) AS minimum,
+        MAX(duration) AS maximum,
+        STD(duration) AS std
     FROM
-        statistics
+        statistic_hist
     GROUP BY
-        ident;
+        ident
+    ORDER BY
+        total DESC, 
+        ident ASC;

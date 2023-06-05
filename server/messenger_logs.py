@@ -6,7 +6,6 @@ from functools import wraps
 
 
 MAX_ERROR_LIFETIME = 1000 * 3600 * 24 * 30
-MAX_STATISTIC_LIFETIME = 1000 * 3600 * 24 * 30
 
 DB_COMMANDS = []
 
@@ -26,7 +25,10 @@ def log_statistic(fun):
         t1 = time()
         result = fun(*args, **kwargs)
         t2 = time()        
-        DB_COMMANDS.append(("INSERT INTO statistics (timestamp, time, ident) VALUES (%s, %s, %s)", [int(t1*1000), (t2-t1)*1000, fun.__name__[:16]]))        
+        duration = int(round((t2-t1)*1000))   
+        short_name = fun.__name__[:16]
+        DB_COMMANDS.append(("INSERT IGNORE INTO statistic_hist (duration, ident) VALUES (%s, %s)", [duration, short_name]))  
+        DB_COMMANDS.append(("UPDATE statistic_hist SET `count` = `count` + 1 WHERE duration = %s AND ident = %s", [duration, short_name]))        
         return result
     
     return decorator
@@ -41,8 +43,6 @@ def save_logs():
             cursor.execute(command, params)
             
         cursor.execute("DELETE FROM errors WHERE timestamp < %s", [int(time()*1000) - MAX_ERROR_LIFETIME])
-        cursor.execute("DELETE FROM statistics WHERE timestamp < %s", [int(time()*1000) - MAX_ERROR_LIFETIME])
-        
         DB_COMMANDS = []
     
     if len(DB_COMMANDS) > 0:
