@@ -2,7 +2,6 @@ import cherrypy
 import json
 import messenger
 import os
-import traceback
 
 from tasks import Task
 from messenger_logs import log_error, log_statistic, save_logs
@@ -70,7 +69,7 @@ def unpackCherryPyJson(fun):
         try:
             return json.dumps(fun(*args, **kwargs)).encode("utf-8")
         except Exception as err:
-            log_error(str(err) + "\n\n" + str().join(traceback.TracebackException.from_exception(err).format()))
+            log_error(err)
             cherrypy.log(err)
             return ERROR_RESPONSE
 
@@ -217,11 +216,11 @@ if __name__ == "__main__":
     cherrypy.tree.mount(Root(), '/', SERVER_CONFIG)
     cherrypy.tree.mount(Server(), '/query', SERVER_CONFIG)
     
-    task = Task(cherrypy.engine, messenger.cursor_provider(messenger.maintain), 3600)
-    task.subscribe()
-    task = Task(cherrypy.engine, save_logs, 30)
-    task.subscribe()
     log_error("Server started")
+    task = Task(cherrypy.engine, save_logs, period=30, init_delay=30, repeat_on_close=True, before_close=lambda: log_error("Server stopped"))
+    task.subscribe()
+    task = Task(cherrypy.engine, messenger.cursor_provider(messenger.maintain), period=3600, init_delay=10)
+    task.subscribe()
 
     cherrypy.engine.start()
     cherrypy.engine.block()

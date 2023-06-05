@@ -281,6 +281,8 @@ hr {
 
 .chat-list-table th {
     background-color: rgb(58, 58, 58);
+    padding-left: 5px;
+    padding-right: 5px;
 }
 
 .chat-list-table td, .chat-list-table tr {

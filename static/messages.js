@@ -252,8 +252,6 @@ const connectWS = function () {
             if (playSound) {
                 notification.play();
                 isNewMessage = true;
-            } else {
-                ws.send(JSON.stringify({"action": "set_as_readed"}));
             }
         }
         if (data.action == "ordered_messages") {

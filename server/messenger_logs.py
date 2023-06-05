@@ -1,4 +1,5 @@
 import messenger
+import traceback
 
 from time import time
 from functools import wraps
@@ -11,6 +12,8 @@ DB_COMMANDS = []
 
 
 def log_error(error):
+    if isinstance(error, Exception):
+        return log_error(str(error) + "\n\n" + str().join(traceback.TracebackException.from_exception(error).format()))
     global DB_COMMANDS
     DB_COMMANDS.append(("INSERT INTO errors (timestamp, message) VALUES (%s, %s)", [int(time()*1000), str(error)]))        
 
