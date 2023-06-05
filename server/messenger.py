@@ -9,6 +9,7 @@ from markdown import markdown
 from functools import wraps
 from time import sleep
 from random import random
+from threading import Thread
 
 MAX_MESSAGE_LENGTH = 262143
 MAX_USERNAME_LENGTH = 255
@@ -198,6 +199,7 @@ def remove_unused_threads(cursor):
 def delete_old_tokens_accounts(cursor):
     cursor.execute("DELETE FROM tokens WHERE hash NOT IN (SELECT hash FROM valid_tokens)")
     cursor.execute("DELETE FROM tokens WHERE account IN (SELECT id FROM accounts WHERE last_login_timestamp < UNIX_TIMESTAMP() * 1000 - %s)", [DELETE_ACCOUNT_TIME])
+    cursor.execute("UPDATE users SET account = NULL AND closed = 1 WHERE account IN (SELECT id FROM accounts WHERE last_login_timestamp < UNIX_TIMESTAMP() * 1000 - %s)", [DELETE_ACCOUNT_TIME])
     cursor.execute("DELETE FROM accounts WHERE last_login_timestamp < UNIX_TIMESTAMP() * 1000 - %s", [DELETE_ACCOUNT_TIME])
 
 
@@ -400,8 +402,12 @@ def activity(cursor, token):
     cursor.execute("SELECT COUNT(*) FROM valid_tokens WHERE hash = %s", [token])
     count, = cursor.fetchone()
     if count > 0:
-        cursor.execute("UPDATE tokens SET last_activity_timestamp = %s WHERE hash = %s", [timestamp, token])    
-        cursor.execute("UPDATE accounts SET last_login_timestamp = %s WHERE id IN (SELECT account FROM valid_tokens WHERE hash = %s)", [timestamp, token])
+        def update_tables(cursor):
+            sleep(1)
+            cursor.execute("UPDATE tokens SET last_activity_timestamp = %s WHERE hash = %s", [timestamp, token])    
+            cursor.execute("UPDATE accounts SET last_login_timestamp = %s WHERE id IN (SELECT account FROM valid_tokens WHERE hash = %s)", [timestamp, token])
+        Thread(target=cursor_provider(update_tables)).start()
+        
     return {"status": "ok", "result": count>0}
 
 

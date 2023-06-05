@@ -21,6 +21,7 @@ CREATE TABLE accounts (
 );
 
 CREATE UNIQUE INDEX accounts_logins ON accounts (login(16));
+CREATE INDEX accounts_login_timestamp ON accounts (last_login_timestamp);
 
 CREATE TABLE tokens (
     hash VARCHAR(64) PRIMARY KEY,
