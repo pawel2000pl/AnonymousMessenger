@@ -171,7 +171,7 @@ newMessagesLabel.addEventListener('click', async ()=>{
         action: 'get_newest',
         offset: 0,
         limit: messageBatch,
-        excludeList: [],
+        exclude_list: [],
     };
     ws.send(JSON.stringify(data));
 });
@@ -209,7 +209,7 @@ messagesList.addEventListener('scroll', async ()=>{
         action: 'get_messages',
         offset: 0,
         limit: messageBatch,
-        excludeList: messageIds,
+        exclude_list: messageIds,
         id_bookmark: id_bookmark,
         id_direction: id_direction
     };
@@ -229,7 +229,7 @@ const connectWS = function () {
             action: 'get_newest',
             offset: 0,
             limit: messageBatch,
-            excludeList: [],
+            exclude_list: [],
         };
         ws.send(JSON.stringify(data));
     };

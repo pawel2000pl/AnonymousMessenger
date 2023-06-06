@@ -10,6 +10,7 @@ from threading import Thread
 
 SUBSCRIBTIONS = defaultdict(set)
 NOTIFY_SUBSCRIBTION = defaultdict(set)
+NOTIFY_SUBSCRIBTION_READED = defaultdict(set)
 
 @log_statistic
 def propagate_message(cursor, thread_id, message_id):
@@ -22,6 +23,14 @@ def propagate_message(cursor, thread_id, message_id):
     for ws, ident in NOTIFY_SUBSCRIBTION[thread_id]:
         txt_msg = TextMessage(json.dumps({"action": "new_message", "userhash": ident}))        
         Thread(target=lambda ws=ws, msg=txt_msg: ws.send(msg)).start()
+        
+        
+@log_statistic
+def propagate_readed(userhash):
+    for ws in  NOTIFY_SUBSCRIBTION_READED[userhash]:
+        txt_msg = TextMessage(json.dumps({"action": "message_readed", "userhash": userhash}))     
+        Thread(target=lambda ws=ws, msg=txt_msg:ws.send(msg)).start()
+        
 
 class ChatWebSocketHandler(WebSocket):
     
@@ -53,6 +62,7 @@ class ChatWebSocketHandler(WebSocket):
                     
             if action == 'set_as_readed':
                 messenger.set_user_read(cursor, self.userhash, self.token)
+                propagate_readed(self.userhash)
                 connection.commit()
                 
             if action == 'get_messages' or action == 'get_newest':
@@ -95,10 +105,13 @@ class NotifyWebSocketHandler(WebSocket):
             cursor = connection.cursor()
             
             if action == 'subscribe':           
-                self.userhash.append(content.get('userhash', ''))
+                current_hash = content.get('userhash', '')
+                self.userhash.append(current_hash)
                 self.token = content.get('token', '')
-                self.thread_id.append(messenger.get_thread_id(cursor, self.userhash, self.token))
-                NOTIFY_SUBSCRIBTION[self.thread_id[-1]].add((self, self.userhash[-1]))
+                current_thread_id = messenger.get_thread_id(cursor, current_hash, self.token)
+                self.thread_id.append(current_thread_id)
+                NOTIFY_SUBSCRIBTION[current_thread_id].add((self, current_hash))
+                NOTIFY_SUBSCRIBTION_READED[current_hash].add(self)
         except Exception as err:
             log_error(err)   
             
@@ -108,6 +121,9 @@ class NotifyWebSocketHandler(WebSocket):
             for thread_id in self.thread_id:
                 if thread_id in NOTIFY_SUBSCRIBTION:
                     NOTIFY_SUBSCRIBTION[thread_id].remove(self)
+            for userhash in self.userhash:
+                if self in NOTIFY_SUBSCRIBTION_READED[userhash]:
+                    NOTIFY_SUBSCRIBTION_READED[userhash].remove(self)
         except Exception as err:
             log_error(err)   
         

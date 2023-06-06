@@ -2,6 +2,7 @@ import cherrypy
 import json
 import messenger
 import os
+import traceback
 
 from tasks import Task
 from messenger_logs import log_error, log_statistic, save_logs
@@ -71,6 +72,10 @@ def unpackCherryPyJson(fun):
         except Exception as err:
             log_error(err)
             cherrypy.log(err)
+            return ERROR_RESPONSE
+        except:
+            log_error(traceback.format_exc())
+            cherrypy.log(traceback.format_exc())
             return ERROR_RESPONSE
 
     return decorator
@@ -168,8 +173,8 @@ class Server:
     
     
     @decorator_pack
-    def get_messages(self, cursor, userhash, offset=0, limit=100, id_bookmark=0, id_direction=0, excludeList=[], token=""):
-        return messenger.get_messages(cursor, userhash, offset, limit, id_bookmark, id_direction, excludeList, token)
+    def get_messages(self, cursor, userhash, offset=0, limit=100, id_bookmark=0, id_direction=0, exclude_list=[], token=""):
+        return messenger.get_messages(cursor, userhash, offset, limit, id_bookmark, id_direction, exclude_list, token)
 
 
     @decorator_pack

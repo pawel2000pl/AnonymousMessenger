@@ -110,11 +110,9 @@ def is_access_valid(cursor, userhash, token):
 def get_thread_id(cursor, userhash, token=""):
     cursor.execute(f"""
         SELECT 
-            threads.id
+            users.thread
         FROM 
-            threads
-        JOIN 
-            users ON (users.thread = threads.id)
+            users
         WHERE 
             users.id = ({VALIDATE_ACCESS_QUERY})
         LIMIT 1
@@ -339,40 +337,46 @@ def set_user_read(cursor, userhash, token=""):
     return {"status": "ok"}
 
     
-def get_messages(cursor, userhash, offset=0, limit=64, id_bookmark=0, id_direction=0, excludeList=[], token=""):
+def get_messages(cursor, userhash, offset=0, limit=64, id_bookmark=0, id_direction=0, exclude_list=[], token=""):
     id_direction = int(id_direction)
     id_direction = id_direction if abs(id_direction) == 1 else 0
     id_bookmark = int(id_bookmark)
     limit = max(min(int(limit), 256), 0)
     offset = max(0, int(offset))
+    exclude_list_str = ", ".join(str(i) if isinstance(i, int) else str(int(i)) for i in exclude_list + ["-1"])
     cursor.execute(f"""
-        SELECT 
-            id,
-            sender,
-            me,
-            timestamp,            
-            UNCOMPRESS(AES_DECRYPT(content, %s)),
-            is_system
-        FROM 
-            messages_view
+        SELECT *
+        FROM
+        (
+            SELECT 
+                id,
+                sender,
+                me,
+                timestamp,            
+                UNCOMPRESS(AES_DECRYPT(content, %s)),
+                is_system
+            FROM 
+                messages_view
+            WHERE
+                init_user_id = ({VALIDATE_ACCESS_QUERY})
+            AND
+            (            
+                %s = 0
+                OR
+                    (id > %s AND %s = 1)
+                OR
+                    (id < %s AND %s = -1)
+            )
+            ORDER BY
+                id * %s,
+                id DESC
+            LIMIT {int(limit)}
+            OFFSET {int(offset)}
+        ) AS subquery
         WHERE
-            init_user_id = ({VALIDATE_ACCESS_QUERY})
-        AND
-        (            
-            %s = 0
-            OR
-                (id > %s AND %s = 1)
-            OR
-                (id < %s AND %s = -1)
-        )
-        ORDER BY
-            id * %s,
-            id DESC
-        LIMIT {int(limit)}
-        OFFSET {int(offset)}
+            subquery.id NOT IN ({exclude_list_str})
         """, [AES_KEY, userhash, token, id_direction, id_bookmark, id_direction, id_bookmark, id_direction, id_direction])
-    excludeSet = set(excludeList)
-    return {"status": "ok", "messages": [{"id": id, "username": username, "me": bool(me), "timestamp": timestamp, "content": markdown(content.decode('utf-8')), "system": bool(system)} for id, username, me, timestamp, content, system in cursor if id not in excludeSet]}
+    return {"status": "ok", "messages": [{"id": id, "username": username, "me": bool(me), "timestamp": timestamp, "content": markdown(content.decode('utf-8')), "system": bool(system)} for id, username, me, timestamp, content, system in cursor]}
 
 
 def get_threads_with_token(cursor, token):
@@ -417,18 +421,16 @@ def activity(cursor, token):
 
 
 def login(cursor, login, password, no_activity_lifespan=3600, max_lifespan=604800):
+    random_sleep()
     cursor.execute("SELECT id, password FROM accounts WHERE login = %s LIMIT 1", [str(login)])
     try:
         account_id, password_hash, = cursor.fetchone()
     except TypeError as _:
-        random_sleep()
         return {"status": "ok", "result": False}
     
     if not bcrypt.checkpw(str(password).encode('utf-8'), password_hash.encode('utf-8')):
-        random_sleep()
         return {"status": "ok", "result": False}
     
-    random_sleep()
     timestamp = get_timestamp()
     for _ in range(256):
         try:
