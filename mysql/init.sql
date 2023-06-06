@@ -131,8 +131,6 @@ CREATE TABLE statistic_hist (
 
 CREATE UNIQUE INDEX statistic_hist_index ON statistic_hist (duration, ident);
 
-CREATE INDEX statistics_timestamp ON statistics(timestamp);
-
 CREATE VIEW agregated_statistics AS
     SELECT 
         ident,

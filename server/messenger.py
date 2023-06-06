@@ -28,7 +28,7 @@ DATABASE_USER = os.getenv("DATABASE_USER")
 DATABASE_PASS = os.getenv("DATABASE_PASS")
 DATABASE_POTR = os.getenv("DATABASE_PORT", "3306")
 AES_KEY = os.getenv("AES_KEY", "4ea040749715201f3fb0352b41eea15e5ad969508701eb25401770ff0cefaa97")
-
+RANDOM_DEVICE = os.getenv("RANDOM_DEVICE", "/dev/random")
 
 def get_database_connection():
     return mysql.connector.connect(
@@ -66,7 +66,7 @@ def insert_inline_token_query(userhash, token):
 
     
 def my_uuid():
-    with open("/dev/random", "rb") as f:        
+    with open(RANDOM_DEVICE, "rb") as f:        
         return sha256(f.read(64*1024)).hexdigest()
     
 
@@ -197,10 +197,14 @@ def remove_unused_threads(cursor):
 
 
 def delete_old_tokens_accounts(cursor):
-    cursor.execute("DELETE FROM tokens WHERE hash NOT IN (SELECT hash FROM valid_tokens)")
+    cursor.execute("CREATE TEMPORARY TABLE IF NOT EXISTS hashes_of_valid_tokens (hash LONGTEXT)")
+    cursor.execute("DELETE FROM hashes_of_valid_tokens")    
+    cursor.execute("INSERT INTO hashes_of_valid_tokens SELECT hash FROM valid_tokens") 
+    cursor.execute("DELETE FROM tokens WHERE hash NOT IN (SELECT hash FROM hashes_of_valid_tokens)")
     cursor.execute("DELETE FROM tokens WHERE account IN (SELECT id FROM accounts WHERE last_login_timestamp < UNIX_TIMESTAMP() * 1000 - %s)", [DELETE_ACCOUNT_TIME])
     cursor.execute("UPDATE users SET account = NULL AND closed = 1 WHERE account IN (SELECT id FROM accounts WHERE last_login_timestamp < UNIX_TIMESTAMP() * 1000 - %s)", [DELETE_ACCOUNT_TIME])
     cursor.execute("DELETE FROM accounts WHERE last_login_timestamp < UNIX_TIMESTAMP() * 1000 - %s", [DELETE_ACCOUNT_TIME])
+    cursor.execute("DELETE FROM hashes_of_valid_tokens")    
 
 
 def maintain(cursor):
@@ -267,6 +271,7 @@ def reset_user_hash(cursor, userhash, token=""):
 
 def set_user_to_account(cursor, userhash, token):    
     cursor.execute("UPDATE users SET account = (SELECT id FROM account_tokens WHERE hash = %s LIMIT 1) WHERE users.account IS NULL AND users.hash = %s", [token, userhash])
+    return {"status": "ok"}
 
     
 def add_user(cursor, create_on, username: str = None, can_create=True, token=""):
@@ -376,7 +381,7 @@ def get_threads_with_token(cursor, token):
             threads.name,
             users.username AS username,
             users.hash AS hash,
-            CAST(SUM(IF(messages_view.timestamp > last_read_time, 1, 0)) AS INTEGER) AS unread,
+            CAST(SUM(messages_view.timestamp > last_read_time) AS INTEGER) AS unread,
             MAX(messages_view.timestamp) AS last_message_timestamp,
             users.last_read_time AS last_read_time
         FROM

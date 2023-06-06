@@ -12,6 +12,8 @@ RUN mkdir -p "$APP_PATH"
 WORKDIR "$APP_PATH"
 
 RUN apt update
+RUN apt upgrade -y
+RUN pip install --upgrade pip
 RUN pip install cherrypy ws4py markdown bcrypt mysql-connector-python
 
 COPY mysql "$APP_PATH/mysql"

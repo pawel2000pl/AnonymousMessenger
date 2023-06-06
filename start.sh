@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ -e "$APP_PATH/.env" ];
+then
+    source "$APP_PATH/.env"
+fi
+
 if [ "$TRANSIENT_DATABASE" == "TRUE" ];
 then
     echo "Starting mysql"

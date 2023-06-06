@@ -17,11 +17,11 @@ def propagate_message(cursor, thread_id, message_id):
     for ws in SUBSCRIBTIONS[thread_id]:
         msg['me'] = userhash == ws.userhash
         txt_msg = TextMessage(json.dumps({"action": "new_message", "messages": [msg]}))
-        Thread(target=lambda msg=txt_msg: ws.send(msg)).start()
+        Thread(target=lambda ws=ws, msg=txt_msg: ws.send(msg)).start()
     
     for ws, ident in NOTIFY_SUBSCRIBTION[thread_id]:
         txt_msg = TextMessage(json.dumps({"action": "new_message", "userhash": ident}))        
-        Thread(target=lambda msg=txt_msg: ws.send(msg)).start()
+        Thread(target=lambda ws=ws, msg=txt_msg: ws.send(msg)).start()
 
 class ChatWebSocketHandler(WebSocket):
     

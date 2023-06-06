@@ -238,6 +238,7 @@ const connectWS = function () {
         let messages = data.messages;
         if (data.action == "new_message") { 
             let playSound = false;
+            isNewMessage = true;
             for (let i=0;i<messages.length;i++) {
                 playSound = playSound || (!messages[i].me);
             }
@@ -251,7 +252,6 @@ const connectWS = function () {
             }
             if (playSound) {
                 notification.play();
-                isNewMessage = true;
             }
         }
         if (data.action == "ordered_messages") {
