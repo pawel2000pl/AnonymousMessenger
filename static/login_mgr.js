@@ -36,7 +36,7 @@ const checkToken = async function() {
     let result = await response.json();
     if (result['status'] != "ok" || result['result'] == false) {
         localStorage.token = "";
-        alert("Login again");
+        alert(translate("Logged out"));
         window.location = window.location.origin;
     }
 };

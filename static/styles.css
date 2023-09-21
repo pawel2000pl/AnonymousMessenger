@@ -302,3 +302,12 @@ hr {
     color: inherit;
     text-decoration: inherit;
 }
+
+#logo-in-menu {
+    height: 3vmax; 
+    padding-left: calc(2.5 * var(--font-size)); 
+    padding-top: calc(0.3 * var(--font-size)); 
+    font-weight: bolder;
+    font-size: calc(1.1 * var(--font-size));
+    cursor: pointer;
+}

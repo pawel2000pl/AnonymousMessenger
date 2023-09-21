@@ -123,6 +123,11 @@ class Server:
     
     
     @decorator_pack
+    def add_user_to_account(self, cursor, userhash, token=""):
+        return messenger.add_user_to_account(cursor, userhash, token=token)
+    
+    
+    @decorator_pack
     def activity(self, cursor, token=""):
         return messenger.activity(cursor, token=token)
             

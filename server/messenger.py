@@ -105,6 +105,13 @@ def is_access_valid(cursor, userhash, token):
     cursor.execute(f"SELECT COUNT(*) FROM ({VALIDATE_ACCESS_QUERY}) AS tmp", [userhash, token])    
     count, = cursor.fetchone()
     return {"status": "ok", "result": count>0}
+
+
+def add_user_to_account(cursor, userhash, token):
+    result = is_access_valid(cursor, userhash, token)
+    if result["result"]:
+        set_user_to_account(cursor, userhash, token)
+    return result
         
 
 def get_thread_id(cursor, userhash, token=""):
@@ -456,5 +463,8 @@ def logout(cursor, token=""):
 def register(cursor, login, password):
     password_hash = bcrypt.hashpw(str(password).encode('utf-8'), bcrypt.gensalt(13)).decode('utf-8')
     delete_old_tokens_accounts(cursor)
-    cursor.execute("INSERT INTO accounts (login, password, last_login_timestamp) VALUES (%s, %s, %s)", [str(login), password_hash, get_timestamp() - DELETE_ACCOUNT_TIME + ACTIVATE_ACCOUNT_TIME])
-    return {"status": "ok"}
+    try:
+        cursor.execute("INSERT INTO accounts (login, password, last_login_timestamp) VALUES (%s, %s, %s)", [str(login), password_hash, get_timestamp() - DELETE_ACCOUNT_TIME + ACTIVATE_ACCOUNT_TIME])
+        return {"status": "ok"}
+    except mysql.connector.errors.IntegrityError:
+        return {"status": "error"}

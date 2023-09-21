@@ -4,10 +4,8 @@ if [ "$TRANSIENT_DATABASE" == "TRUE" ];
 then
     cd /tmp
     apt install -y wget
-    wget https://dev.mysql.com/get/mysql-apt-config_0.8.22-1_all.deb
-    apt install -y ./mysql-apt-config_0.8.22-1_all.deb
     apt update
-    apt install -y mysql-server mysql-common mysql-client
+    apt install -y mariadb-server
 
     cd "$APP_PATH"
 

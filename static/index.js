@@ -10,6 +10,7 @@ const loginBtn = document.getElementById('login-btn');
 const registerBtn = document.getElementById('register-btn');
 const loginDiv = document.getElementById('login-div');
 const chatListDiv = document.getElementById('chat-list-div');
+const logOutBtn = document.getElementById('logout-btn');
 
 chatNameInput.addEventListener('keypress', (event)=>{
     if (event.key == "Enter") {
@@ -54,7 +55,7 @@ userHashInput.addEventListener('keypress', (event)=>{
 
 joinChatBtn.addEventListener('click', async ()=>{
     let userhash = userHashInput.value;
-    let response = await fetch('/query/is_access_valid', {
+    let response = await fetch('/query/add_user_to_account', {
         method: "post",
         headers: {
             "Content-Type": "application/json"
@@ -127,12 +128,30 @@ registerBtn.addEventListener('click', async ()=>{
     alert(translate('User created. Login within 5 minutes to confirm the registration'));
 });
 
+logOutBtn.addEventListener('click', async ()=>{
+    if (localStorage.token == undefined || localStorage.token == "")
+        return;
+    await fetch('/query/activity', {
+        method: "post",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            token: localStorage.token??""
+        }),
+    });
+    localStorage.token = undefined;
+    window.location = window.location.origin;;
+});
+
 permissionChecks.then(()=>{
     if (localStorage.token) {
         loginDiv.style.display = "none";
         chatListDiv.style.display = "";
+        logOutBtn.style.display = "";
     } else {
         loginDiv.style.display = "";
         chatListDiv.style.display = "none";
+        logOutBtn.style.display = "none;";
     }
 });
