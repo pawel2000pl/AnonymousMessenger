@@ -11,6 +11,12 @@ const registerBtn = document.getElementById('register-btn');
 const loginDiv = document.getElementById('login-div');
 const chatListDiv = document.getElementById('chat-list-div');
 const logOutBtn = document.getElementById('logout-btn');
+const resetPasswordDiv = document.getElementById('reset-password-div');
+const currentAccountPassword = document.getElementById('current-account-password');
+const newAccountPassword = document.getElementById('new-account-password');
+const newAccountPassword2 = document.getElementById('new-account-password-2');
+const changePasswordBtn = document.getElementById('change-password-btn');
+
 
 chatNameInput.addEventListener('keypress', (event)=>{
     if (event.key == "Enter") {
@@ -19,12 +25,14 @@ chatNameInput.addEventListener('keypress', (event)=>{
     }
 });
 
+
 firstUserInput.addEventListener('keypress', (event)=>{
     if (event.key == "Enter") {
         event.preventDefault()
         createNewChatBtn.click();
     }
 });
+
 
 createNewChatBtn.addEventListener('click', async ()=>{
     let response = await fetch('/query/create_new_thread', {
@@ -46,12 +54,14 @@ createNewChatBtn.addEventListener('click', async ()=>{
     window.location.href = window.location.origin + "/messages.html?userhash="+response.userhash;
 });
 
+
 userHashInput.addEventListener('keypress', (event)=>{
     if (event.key == "Enter") {
         event.preventDefault()
         joinChatBtn.click();
     }
 });
+
 
 joinChatBtn.addEventListener('click', async ()=>{
     let userhash = userHashInput.value;
@@ -75,6 +85,7 @@ joinChatBtn.addEventListener('click', async ()=>{
     window.location = window.location.origin + "/messages.html?" + params.toString();
 });
 
+
 accountLogin.addEventListener('keypress', (event)=>{
     if (event.key == "Enter") {
         event.preventDefault()
@@ -82,12 +93,14 @@ accountLogin.addEventListener('keypress', (event)=>{
     }
 });
 
+
 accountPassword.addEventListener('keypress', (event)=>{
     if (event.key == "Enter") {
         event.preventDefault()
         loginBtn.click();
     }
 });
+
 
 loginBtn.addEventListener('click', async ()=>{
     let response = await fetch('/query/login', {
@@ -109,6 +122,30 @@ loginBtn.addEventListener('click', async ()=>{
     window.location.href = window.location.origin + "/";
 });
 
+
+changePasswordBtn.addEventListener('click', async ()=>{
+    if (newAccountPassword2.value != newAccountPassword.value)
+        alert(translate('The passwords are not identical'));
+    let response = await fetch('/query/change_password', {
+        method: "post",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            token: localStorage.token??"",
+            password: currentAccountPassword.value,
+            new_password: newAccountPassword.value,
+        }),
+    });
+    let result = await response.json();
+    if (result['status'] != "ok") {
+        alert(translate('Cannot change the password (check old password)'));
+        return;
+    }
+    alert(translate('Password changed'));
+});
+
+
 registerBtn.addEventListener('click', async ()=>{
     let response = await fetch('/query/register', {
         method: "post",
@@ -122,11 +159,12 @@ registerBtn.addEventListener('click', async ()=>{
     });
     let result = await response.json();
     if (result['status'] != "ok") {
-        alert('Cannot create the user - try another username');
+        alert(translate('Cannot create the user - try another username'));
         return;
     }
     alert(translate('User created. Login within 5 minutes to confirm the registration'));
 });
+
 
 logOutBtn.addEventListener('click', async ()=>{
     if (localStorage.token == undefined || localStorage.token == "")
@@ -144,14 +182,17 @@ logOutBtn.addEventListener('click', async ()=>{
     window.location = window.location.origin;;
 });
 
+
 permissionChecks.then(()=>{
     if (localStorage.token) {
         loginDiv.style.display = "none";
         chatListDiv.style.display = "";
         logOutBtn.style.display = "";
+        resetPasswordDiv.style.display = "";
     } else {
         loginDiv.style.display = "";
         chatListDiv.style.display = "none";
         logOutBtn.style.display = "none;";
+        resetPasswordDiv.style.display = "none";
     }
 });

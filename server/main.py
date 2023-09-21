@@ -193,6 +193,11 @@ class Server:
 
 
     @decorator_pack
+    def change_password(self, cursor, token, password, new_password):
+        return messenger.change_password(cursor, token, password, new_password)
+    
+    
+    @decorator_pack
     def register(self, cursor, login, password):
         return messenger.register(cursor, login, password)
     

@@ -427,6 +427,30 @@ def activity(cursor, token):
     return {"status": "ok", "result": count>0}
 
 
+def change_password(cursor, token, password, new_password):
+    cursor.execute("""
+        SELECT
+            accounts.id AS id,
+            accounts.password AS password
+        FROM
+            tokens
+        JOIN
+            accounts ON (tokens.account = accounts.id)
+        WHERE
+            tokens.hash = %s
+        LIMIT 1
+        """, [token])
+    results = cursor.fetchall()
+    if len(results) == 0:
+        return {"status": "ok", "result": False}
+    id, password_hash = results[0]
+    if not bcrypt.checkpw(str(password).encode('utf-8'), password_hash.encode('utf-8')):
+        return {"status": "ok", "result": False}
+    password_hash = bcrypt.hashpw(str(new_password).encode('utf-8'), bcrypt.gensalt(13)).decode('utf-8')
+    cursor.execute("UPDATE accounts SET password = %s WHERE id = %s", [password_hash, id])
+    return {"status": "ok", "result": True}
+
+
 def login(cursor, login, password, no_activity_lifespan=3600, max_lifespan=604800):
     random_sleep()
     cursor.execute("SELECT id, password FROM accounts WHERE login = %s LIMIT 1", [str(login)])
