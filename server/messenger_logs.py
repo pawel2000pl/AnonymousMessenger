@@ -27,8 +27,7 @@ def log_statistic(fun):
         t2 = time()        
         duration = int(round((t2-t1)*1000))   
         short_name = fun.__name__[:16]
-        DB_COMMANDS.append(("INSERT IGNORE INTO statistic_hist (duration, ident) VALUES (%s, %s)", [duration, short_name]))  
-        DB_COMMANDS.append(("UPDATE statistic_hist SET `count` = `count` + 1 WHERE duration = %s AND ident = %s", [duration, short_name]))        
+        DB_COMMANDS.append(("INSERT INTO statistic_hist (duration, ident, count) VALUES (%s, %s, 1) ON DUPLICATE KEY UPDATE `count` = `count` + 1", [duration, short_name]))
         return result
     
     return decorator
