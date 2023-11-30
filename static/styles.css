@@ -311,3 +311,11 @@ hr {
     font-size: calc(1.1 * var(--font-size));
     cursor: pointer;
 }
+
+#github-link {
+    position: absolute;
+    bottom: 0px;
+    left: 0px;
+    font-size: smaller;
+    color: gray;
+}

@@ -2,6 +2,7 @@
     "en": {
         "Acces data is invalid": "Acces data is invalid",
         "Account ID": "Account ID",
+        "Are you sure that you want to delete your account?": "Are you sure that you want to delete your account?",
         "Are you sure that you want to leave this chat?": "Are you sure that you want to leave this chat?",
         "Cannot change the password (check old password)": "Cannot change the password (check old password)",
         "Cannot create the user - try another username": "Cannot create the user - try another username",
@@ -15,6 +16,7 @@
         "Create": "Create",
         "Create new chat": "Create new chat",
         "Current password": "Current password",
+        "Delete account": "Delete account",
         "Error occured": "Error occured",
         "First username": "First username",
         "Generate": "Generate",
@@ -53,6 +55,7 @@
     "pl": {
         "Acces data is invalid": "Nieprawid\u0142owy kod dost\u0119pu",
         "Account ID": "Identyfikator konta",
+        "Are you sure that you want to delete your account?": "Czy na pewno chcesz usun\u0105\u0107 to konto?",
         "Are you sure that you want to leave this chat?": "Czy na pewno chcesz opu\u015bci\u0107 ten czat?",
         "Cannot change the password (check old password)": "Nie mo\u017cna zmieni\u0107 has\u0142a (sprawd\u017a stare has\u0142o)",
         "Cannot create the user - try another username": "Nie mo\u017cna utworzy\u0107 takiego u\u017cytkownika - spr\u00f3buj poda\u0107 inn\u0105 nazw\u0119 u\u017cytkownika",
@@ -66,6 +69,7 @@
         "Create": "Utw\u00f3rz",
         "Create new chat": "Utw\u00f3rz nowy czat",
         "Current password": "Aktualne has\u0142o",
+        "Delete account": "Usu\u0144 konto",
         "Error occured": "Wyst\u0105pi\u0142 b\u0142\u0105d",
         "First username": "Pierwszy u\u017cytkownik",
         "Generate": "Wygeneruj",
@@ -104,6 +108,7 @@
     "de": {
         "Acces data is invalid": "Ung\u00fcltiger Zugriffscode",
         "Account ID": "Kontonummer",
+        "Are you sure that you want to delete your account?": "Sind Sie sicher, dass Sie dieses Konto l\u00f6schen m\u00f6chten?",
         "Are you sure that you want to leave this chat?": "Sind Sie sicher, dass Sie diesen Chat verlassen m\u00f6chten?",
         "Cannot change the password (check old password)": "Das Passwort kann nicht ge\u00e4ndert werden (\u00fcberpr\u00fcfen Sie das alte Passwort)",
         "Cannot create the user - try another username": "Benutzer kann nicht erstellt werden - versuchen Sie einen anderen Benutzernamen",
@@ -117,6 +122,7 @@
         "Create": "Erstellen",
         "Create new chat": "Neuen Chat erstellen",
         "Current password": "Aktuelles Passwort",
+        "Delete account": "L\u00f6sche deinen Account",
         "Error occured": "Es ist ein Fehler aufgetreten",
         "First username": "Erster Benutzername",
         "Generate": "Generieren",
@@ -155,6 +161,7 @@
     "fr": {
         "Acces data is invalid": "Les donn\u00e9es d'acc\u00e8s sont invalides",
         "Account ID": "Identifiant du compte",
+        "Are you sure that you want to delete your account?": "\u00cates-vous s\u00fbr de vouloir supprimer ce compte?",
         "Are you sure that you want to leave this chat?": "\u00cates-vous s\u00fbr de vouloir quitter cette discussion ?",
         "Cannot change the password (check old password)": "Impossible de changer le mot de passe (v\u00e9rifiez l'ancien mot de passe)",
         "Cannot create the user - try another username": "Impossible de cr\u00e9er l'utilisateur - essayez un autre nom d'utilisateur",
@@ -168,6 +175,7 @@
         "Create": "Cr\u00e9er",
         "Create new chat": "Cr\u00e9er une nouvelle discussion",
         "Current password": "Mot de passe actuel",
+        "Delete account": "Supprimer votre compte",
         "Error occured": "Une erreur s'est produite",
         "First username": "Premier nom d'utilisateur",
         "Generate": "G\u00e9n\u00e9rer",

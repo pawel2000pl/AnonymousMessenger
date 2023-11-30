@@ -26,6 +26,13 @@ DATABASE_PORT
 AES_KEY
 ```
 
+Fast run:
+```
+# Required .env file with exported all neccessary variables
+APP_PATH='.' bash start.sh
+```
+
+Works also with VSCode debug (F5).
 
 ![login_page](screenshots/Screenshot1.png)
 <br>

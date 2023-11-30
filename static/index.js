@@ -16,6 +16,7 @@ const currentAccountPassword = document.getElementById('current-account-password
 const newAccountPassword = document.getElementById('new-account-password');
 const newAccountPassword2 = document.getElementById('new-account-password-2');
 const changePasswordBtn = document.getElementById('change-password-btn');
+const deleteAccountdBtn = document.getElementById('delete-account-btn');
 
 
 chatNameInput.addEventListener('keypress', (event)=>{
@@ -115,7 +116,7 @@ loginBtn.addEventListener('click', async ()=>{
     });
     let result = await response.json();
     if (result['status'] != "ok" || (!result['result'])) {
-        alert('Invalid user and / or password');
+        alert(translate('Invalid user and / or password'));
         return;
     }
     localStorage.token = result['token'];
@@ -146,6 +147,27 @@ changePasswordBtn.addEventListener('click', async ()=>{
 });
 
 
+deleteAccountdBtn.addEventListener('click', async ()=>{
+    if (!confirm(translate('Are you sure that you want to delete your account?')))
+        return;
+    let response = await fetch('/query/delete_account', {
+        method: "post",
+        headers: {
+            "Content-Type": "application/json"
+        },        
+        body: JSON.stringify({
+            token: localStorage.token??""
+        }),
+    });
+    let result = await response.json();
+    if (result['status'] != "ok") {
+        alert(translate('Error occured'));
+        return;
+    }
+    window.location = '/';
+});
+
+
 registerBtn.addEventListener('click', async ()=>{
     let response = await fetch('/query/register', {
         method: "post",
@@ -169,7 +191,7 @@ registerBtn.addEventListener('click', async ()=>{
 logOutBtn.addEventListener('click', async ()=>{
     if (localStorage.token == undefined || localStorage.token == "")
         return;
-    await fetch('/query/activity', {
+    await fetch('/query/logout', {
         method: "post",
         headers: {
             "Content-Type": "application/json"

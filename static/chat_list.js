@@ -1,3 +1,4 @@
+MESSAGE_LIST_SYNC_INTERVAL = 2500;
 
 const chatList = document.getElementById("chat-list");
 
@@ -86,7 +87,7 @@ const connectWsChatList = async function() {
                     break;
                 }
     };
-    ws.onclose = ()=>{setTimeout(connectWsChatList, MESSAGE_SYNC_INTERVAL)};
+    ws.onclose = ()=>{setTimeout(connectWsChatList, MESSAGE_LIST_SYNC_INTERVAL)};
 };
 
 permissionChecks.then(async ()=>{

@@ -205,6 +205,11 @@ class Server:
     @decorator_pack
     def logout(self, cursor, token=""):
         return messenger.logout(cursor, token)
+    
+    
+    @decorator_pack
+    def delete_account(self, cursor, token=""):
+        return messenger.delete_account(cursor, token)
 
 
 class Root:

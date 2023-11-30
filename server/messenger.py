@@ -233,6 +233,7 @@ def close_user(cursor, userhash, token=""):
             users 
         SET 
             closed = 1, 
+            account = NULL,
             username = 
                 (
                     WITH RECURSIVE cte AS 
@@ -492,3 +493,14 @@ def register(cursor, login, password):
         return {"status": "ok"}
     except mysql.connector.errors.IntegrityError:
         return {"status": "error"}
+    
+    
+def delete_account(cursor, token=""):
+    cursor.execute("SELECT account FROM valid_tokens WHERE hash = %s LIMIT 1", [token])
+    account_id, = cursor.fetchone()
+    cursor.execute("SELECT hash FROM users WHERE account = %s", [account_id])
+    for userhash, in cursor:
+        close_user(cursor, userhash, token)
+    cursor.execute("DELETE FROM tokens WHERE account = %s", [account_id])
+    cursor.execute("DELETE FROM accounts WHERE id = %s", [account_id])
+    return {"status": "ok"}
