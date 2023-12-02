@@ -22,6 +22,10 @@ menuButton.addEventListener('click', ()=>{
 if (window.innerHeight > window.innerWidth)
     menuButton.click();
 
+const sleep = function (ms) {
+    return new Promise((resolve)=>setTimeout(resolve, ms));
+}
+    
 const createMessageCloud = function(messageData) {
     let message = document.createElement('div');
     let content = document.createElement('div');
@@ -31,12 +35,12 @@ const createMessageCloud = function(messageData) {
     message.data = messageData;
     content.innerHTML = messageData.content;
     content.className = "message-content";
-    header.innerText = messageData.username;
+    header.textContent = messageData.username;
     header.className = "message-header " + (messageData.me?"my-message-header":"regular-message-header");
     if (messageData.system)
         header.innerHTML = "<i>System</i>";
     let date = new Date(messageData.timestamp); 
-    timestamp.innerText = date.toLocaleString();
+    timestamp.textContent = date.toLocaleString();
     timestamp.className = "message-timestamp " + (messageData.me?"my-messege-timestamp":"regular-message-timestamp");
     message.appendChild(header);
     message.appendChild(hr);
@@ -121,16 +125,25 @@ const addMessages = function(newMessagesList){
     return count;
 }
 
+const checkWs = async function(trials=50, timeout=100) {
+    for (let i=0;i<trials;i++) {
+        if (ws.readyState == ws.OPEN)
+            return true;
+        await sleep(timeout);
+    }
+    return false;
+}
+
 const sendMessage = async function() {
-    const message = messageEditor.innerText;
+    const message = messageEditor.textContent;
     if (message == "")
         return;
     messageEditor.disabled = "disabled";
     try
-    {
-        if (ws.readyState == ws.OPEN) {
+    { 
+        if (await checkWs()) {
             ws.send(JSON.stringify({"action": "message", "message": message}));
-            messageEditor.innerText = "";
+            messageEditor.textContent = "";
             messageOffset = 0;
             messagesList.scrollTop = messagesList.scrollHeight;
         } else 

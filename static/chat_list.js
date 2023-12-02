@@ -33,7 +33,7 @@ const updateChatList = async function() {
         const td = document.createElement('td');
         const a = document.createElement('a');
         td.className = 'chat-list-cell';
-        a.innerText = text;
+        a.textContent = text;
         a.href = link;
         td.appendChild(a);
         return td;
@@ -76,14 +76,14 @@ const connectWsChatList = async function() {
             for (let i=0;i<table.children.length;i++)
                 if (table.children[i].userhash == data.userhash) {
                     table.children[i].className = "class-list-row";
-                    table.children[i].lastElementChild.firstElementChild.innerText = "";
+                    table.children[i].lastElementChild.firstElementChild.textContent = "";
                     break;
                 }
         if (data.action == "new_message") 
             for (let i=0;i<table.children.length;i++)
                 if (table.children[i].userhash == data.userhash) {
                     table.children[i].className = "class-list-row class-list-row-unread";
-                    table.children[i].lastElementChild.firstElementChild.innerText = 1 + Number(table.children[i].lastElementChild.firstElementChild.innerText);
+                    table.children[i].lastElementChild.firstElementChild.textContent = 1 + Number(table.children[i].lastElementChild.firstElementChild.textContent);
                     break;
                 }
     };

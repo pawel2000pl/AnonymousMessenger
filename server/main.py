@@ -7,7 +7,7 @@ import traceback
 from tasks import Task
 from messenger_logs import log_error, log_statistic, save_logs
 from functools import wraps
-from web_socket_module import ChatWebSocketHandler, NotifyWebSocketHandler, propagate_message
+from web_socket_module import ChatWebSocketHandler, NotifyWebSocketHandler, propagate_message, clean_old_connections
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 
 MY_PATH = os.path.dirname(os.path.abspath(__file__)) + "/"
@@ -26,6 +26,7 @@ with open(STATIC_PATH+"translates.json", "w") as f:
     
 for k in LANGUAGES_LIST:
     TRNASLATES[k]["__supported_languages__"] = LANGUAGES_LIST
+    TRNASLATES[k]["__language_name__"] = k
 
 
 SERVER_CONFIG = \
@@ -244,6 +245,8 @@ if __name__ == "__main__":
     task = Task(cherrypy.engine, lambda: log_error("Ping from "+MY_IDENT), period=900, init_delay=180, repeat_on_close=False)
     task.subscribe()
     task = Task(cherrypy.engine, messenger.cursor_provider(messenger.maintain), period=3600, init_delay=10)
+    task.subscribe()
+    task = Task(cherrypy.engine, clean_old_connections, period=3600, init_delay=60)
     task.subscribe()
 
     cherrypy.engine.start()

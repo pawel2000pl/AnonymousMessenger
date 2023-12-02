@@ -313,9 +313,27 @@ hr {
 }
 
 #github-link {
-    position: absolute;
+    position: fixed;
     bottom: 0px;
     left: 0px;
     font-size: smaller;
-    color: gray;
+    color: gray;  
+    z-index: -1;
+}
+
+.language-selector {
+    position: absolute;
+    z-index: 1;
+    cursor: pointer;
+    padding: 0px;
+}
+
+.language-selector summary {
+    padding: 3px 10px 3px 10px;
+    display: inline;
+}
+
+
+.language-selector div:hover {
+    background-color: rgb(26, 26, 26);
 }

@@ -7,10 +7,12 @@ from collections import defaultdict
 from ws4py.websocket import WebSocket
 from ws4py.messaging import TextMessage
 from threading import Thread
+from time import time
 
 SUBSCRIBTIONS = defaultdict(set)
 NOTIFY_SUBSCRIBTION = defaultdict(set)
 NOTIFY_SUBSCRIBTION_READED = defaultdict(set)
+MAX_CONNECTION_TIME = 7200
 
 @log_statistic
 def propagate_message(cursor, thread_id, message_id):
@@ -39,6 +41,7 @@ class ChatWebSocketHandler(WebSocket):
         self.userhash = ""
         self.token = ""
         self.thread_id = ""
+        self.connectTime = time()
     
     def received_message(self, message: TextMessage):
         try:
@@ -84,7 +87,7 @@ class ChatWebSocketHandler(WebSocket):
     def closed(self, code, reason=""):
         try:
             cherrypy.log('Connection %s closed'%self.userhash[:8])
-            if self.thread_id in SUBSCRIBTIONS:
+            if self.thread_id in SUBSCRIBTIONS and self in SUBSCRIBTIONS[self.thread_id]:
                 SUBSCRIBTIONS[self.thread_id].remove(self)        
         except Exception as err:
             log_error(err)   
@@ -96,6 +99,7 @@ class NotifyWebSocketHandler(WebSocket):
         self.userhash = []
         self.token = ""
         self.thread_id = []
+        self.connectTime = time()
         
     def received_message(self, message: TextMessage):
         try:
@@ -119,11 +123,39 @@ class NotifyWebSocketHandler(WebSocket):
         try:
             cherrypy.log('Multi connection %s closed'%self.token[:8])
             for thread_id in self.thread_id:
-                if thread_id in NOTIFY_SUBSCRIBTION:
-                    NOTIFY_SUBSCRIBTION[thread_id].remove(self)
+                value = (self, self.userhash)
+                if thread_id in NOTIFY_SUBSCRIBTION and value in NOTIFY_SUBSCRIBTION[thread_id]:
+                    NOTIFY_SUBSCRIBTION[thread_id].remove(value)
             for userhash in self.userhash:
-                if self in NOTIFY_SUBSCRIBTION_READED[userhash]:
+                if self in NOTIFY_SUBSCRIBTION_READED[userhash] and self in NOTIFY_SUBSCRIBTION_READED[userhash]:
                     NOTIFY_SUBSCRIBTION_READED[userhash].remove(self)
         except Exception as err:
             log_error(err)   
         
+        
+def clean_old_connections():
+    current_time = time()
+    
+    for k in list(SUBSCRIBTIONS.keys()):
+        for connection in list(SUBSCRIBTIONS[k]):
+            if current_time - connection.connectTime > MAX_CONNECTION_TIME:
+                SUBSCRIBTIONS[k].remove(connection)
+                connection.close()
+        if len(SUBSCRIBTIONS[k]) == 0:
+            SUBSCRIBTIONS.pop(k)
+    
+    for k in list(NOTIFY_SUBSCRIBTION.keys()):
+        for connection, hash in list(NOTIFY_SUBSCRIBTION[k]):
+            if current_time - connection.connectTime > MAX_CONNECTION_TIME:
+                NOTIFY_SUBSCRIBTION[k].remove((connection, hash))
+                connection.close()
+        if len(NOTIFY_SUBSCRIBTION[k]) == 0:
+            NOTIFY_SUBSCRIBTION.pop(k)
+            
+    for k in list(NOTIFY_SUBSCRIBTION_READED.keys()):
+        for connection in list(NOTIFY_SUBSCRIBTION_READED[k]):
+            if current_time - connection.connectTime > MAX_CONNECTION_TIME:
+                NOTIFY_SUBSCRIBTION_READED[k].remove(connection)
+                connection.close()
+        if len(NOTIFY_SUBSCRIBTION_READED[k]) == 0:
+            NOTIFY_SUBSCRIBTION_READED.pop(k)
