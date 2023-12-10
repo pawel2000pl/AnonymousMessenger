@@ -8,7 +8,7 @@ const translate = function(text) {
 }
 
 const translateAll = function() {
-    const keys = ['innerText', 'values', 'textContent'];
+    const keys = ['innerText', 'value', 'textContent'];
     var applyTrans = [];
     Array.from(document.getElementsByClassName("translatable")).forEach((element)=>{
         keys.forEach((key)=>{
@@ -50,15 +50,14 @@ const init = async function() {
 
         let summary = document.createElement('summary');
         summary.textContent = dataLanguage.__language_name__;
-        summary.onblur = ()=>{setTimeout(()=>{element.open = '';}, 100);};
+        summary.onblur = ()=>{setTimeout(()=>{element.open = '';}, 250);};
         element.appendChild(summary);
         
         langList.forEach((lang)=>{
             let option = document.createElement('div');
             option.textContent = lang;
             option.onclick = ()=>{
-                switchLanguage(lang);
-                element.open = '';
+                switchLanguage(lang).then(()=>{element.open = '';});
                 summary.textContent = lang;
             };
             element.append(option);

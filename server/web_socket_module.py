@@ -123,9 +123,10 @@ class NotifyWebSocketHandler(WebSocket):
         try:
             cherrypy.log('Multi connection %s closed'%self.token[:8])
             for thread_id in self.thread_id:
-                value = (self, self.userhash)
-                if thread_id in NOTIFY_SUBSCRIBTION and value in NOTIFY_SUBSCRIBTION[thread_id]:
-                    NOTIFY_SUBSCRIBTION[thread_id].remove(value)
+                for userhash in self.userhash:
+                    value = (self, userhash)
+                    if thread_id in NOTIFY_SUBSCRIBTION and value in NOTIFY_SUBSCRIBTION[thread_id]:
+                        NOTIFY_SUBSCRIBTION[thread_id].remove(value)
             for userhash in self.userhash:
                 if self in NOTIFY_SUBSCRIBTION_READED[userhash] and self in NOTIFY_SUBSCRIBTION_READED[userhash]:
                     NOTIFY_SUBSCRIBTION_READED[userhash].remove(self)
@@ -145,10 +146,10 @@ def clean_old_connections():
             SUBSCRIBTIONS.pop(k)
     
     for k in list(NOTIFY_SUBSCRIBTION.keys()):
-        for connection, hash in list(NOTIFY_SUBSCRIBTION[k]):
-            if current_time - connection.connectTime > MAX_CONNECTION_TIME:
-                NOTIFY_SUBSCRIBTION[k].remove((connection, hash))
-                connection.close()
+        outdated_connections = set(connection for connection, _ in NOTIFY_SUBSCRIBTION[k] if current_time - connection.connectTime > MAX_CONNECTION_TIME)        
+        NOTIFY_SUBSCRIBTION[k] = set((connection, hash) for connection, hash in NOTIFY_SUBSCRIBTION[k] if connection not in outdated_connections)
+        for connection in outdated_connections:
+            connection.close()
         if len(NOTIFY_SUBSCRIBTION[k]) == 0:
             NOTIFY_SUBSCRIBTION.pop(k)
             
