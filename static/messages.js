@@ -135,7 +135,7 @@ const checkWs = async function(trials=50, timeout=100) {
 }
 
 const sendMessage = async function() {
-    const message = messageEditor.textContent;
+    const message = messageEditor.innerText;
     if (message == "")
         return;
     messageEditor.disabled = "disabled";

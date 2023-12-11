@@ -337,7 +337,7 @@ def get_message(cursor, message_id):
         LIMIT 1
         """, [AES_KEY, message_id])
     id, username, userhash, timestamp, content, system  = cursor.fetchone()
-    return {"id": id, "username": username, "timestamp": timestamp, "content": markdown(content.decode('utf-8')), "system": bool(system)}, userhash
+    return {"id": id, "username": username, "timestamp": timestamp, "content": markdown(content.decode('utf-8')).replace("\n", "<br>"), "system": bool(system)}, userhash
     
     
 def set_user_read(cursor, userhash, token=""):
@@ -384,7 +384,7 @@ def get_messages(cursor, userhash, offset=0, limit=64, id_bookmark=0, id_directi
         WHERE
             subquery.id NOT IN ({exclude_list_str})
         """, [AES_KEY, userhash, token, id_direction, id_bookmark, id_direction, id_bookmark, id_direction, id_direction])
-    return {"status": "ok", "messages": [{"id": id, "username": username, "me": bool(me), "timestamp": timestamp, "content": markdown(content.decode('utf-8')), "system": bool(system)} for id, username, me, timestamp, content, system in cursor]}
+    return {"status": "ok", "messages": [{"id": id, "username": username, "me": bool(me), "timestamp": timestamp, "content": markdown(content.decode('utf-8')).replace("\n", "<br>"), "system": bool(system)} for id, username, me, timestamp, content, system in cursor]}
 
 
 def get_threads_with_token(cursor, token):

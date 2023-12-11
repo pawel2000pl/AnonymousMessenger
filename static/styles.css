@@ -1,5 +1,6 @@
 :root {
     --font-size: 1.2vmax; 
+    /* --font-size: 0.5cm; */
 }
   
 body {
@@ -125,6 +126,7 @@ hr {
     border-radius: 10px;
     width: auto;
     height: calc(3 * var(--font-size));
+    font-size: var(--font-size);
 
     background-color: rgb(26, 26, 26);
     border: 2px solid rgb(81, 81, 81);
@@ -203,7 +205,7 @@ hr {
 
 .message-content {
     margin: 0;
-    max-width: inherit;
+    max-width: 100%;
     overflow-x: hidden;
     overflow-y: visible;
     word-wrap: break-word;
@@ -222,7 +224,7 @@ hr {
     padding-bottom: 18px;
     border-radius: 25px;
     width: max-content;
-    height: max-content;
+    height: min-content;
     display: block;
 }
 
