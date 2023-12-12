@@ -76,6 +76,18 @@ CREATE UNIQUE INDEX users_names ON users (thread, username(64));
 CREATE UNIQUE INDEX users_hash ON users (hash);
 CREATE INDEX users_account ON users (account);
 
+CREATE TABLE push_notifications (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user BIGINT,
+    hash VARCHAR(64),
+    subscription_information LONGBLOB,
+    vapid_private_key LONGBLOB,
+    last_derivered_message_timestamp BIGINT NOT NULL DEFAULT 0,
+    FOREIGN KEY (user) REFERENCES users (id)
+);
+
+CREATE INDEX push_notifications_user ON push_notifications (user);
+
 CREATE TABLE messages (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user BIGINT,

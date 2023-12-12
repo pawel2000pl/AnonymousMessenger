@@ -1,21 +1,24 @@
-import mysql.connector
-import bcrypt
 import os
+import json
+import ecdsa
+import base64
+import bcrypt
+import mysql.connector
 
-from hashlib import sha256
-from random import random
 from time import time
-from markdown import markdown
-from functools import wraps
 from time import sleep
 from random import random
+from hashlib import sha256
+from functools import wraps
 from threading import Thread
+from markdown import markdown
 
 MAX_MESSAGE_LENGTH = 262143
 MAX_USERNAME_LENGTH = 255
 DELETE_THREAD_TIME = 1000 * 3600 * 24 * 365
 DELETE_ACCOUNT_TIME = 1000 * 3600 * 24 * 365 * 3
 ACTIVATE_ACCOUNT_TIME = 1000 * 60 * 5
+UNSUBSCRIBE_TIMEOUT = 1000 * 3600 * 24 * 365
 
 CHANGES_USERNAME_MESSSAGE = "User *%s* has changed its nick to *%s*"
 CLOSE_USERNAME_MESSSAGE = "User *%s* has left from the chat"
@@ -29,6 +32,19 @@ DATABASE_PASS = os.getenv("DATABASE_PASS")
 DATABASE_POTR = os.getenv("DATABASE_PORT", "3306")
 AES_KEY = os.getenv("AES_KEY", "4ea040749715201f3fb0352b41eea15e5ad969508701eb25401770ff0cefaa97")
 RANDOM_DEVICE = os.getenv("RANDOM_DEVICE", "/dev/random")
+VAPID_CLAIMS =  {"sub": "mailto:"+os.getenv("mail", "your.email@example.com")}
+
+def generate_vapid_keypair():
+    pk = ecdsa.SigningKey.generate(curve=ecdsa.NIST256p)
+    vk = pk.get_verifying_key()
+    return {
+        'private_key': base64.urlsafe_b64encode(pk.to_string()).decode('utf-8').strip("="),
+        'public_key': base64.urlsafe_b64encode(bytearray(b"\x04") + bytearray(vk.to_string())).decode('utf-8').strip("=")
+    }
+
+VAPID_KEYS = generate_vapid_keypair()
+VAPID_PRIVATE_KEY = VAPID_KEYS['private_key']
+VAPID_PUBLIC_KEY = VAPID_KEYS['public_key']
 
 def get_database_connection():
     return mysql.connector.connect(
@@ -195,6 +211,7 @@ def remove_unused_threads(cursor):
             MIN(users.closed) = 1
             """, [DELETE_THREAD_TIME])
     cursor.execute("DELETE FROM messages WHERE user IN (SELECT users.id FROM users JOIN deleting_threads ON (users.thread = deleting_threads.id))")
+    cursor.execute("DELETE FROM push_notifications WHERE user IN (SELECT users.id FROM deleting_threads JOIN users ON (users.thread = deleting_threads.id))")
     cursor.execute("DELETE FROM users WHERE thread IN (SELECT id FROM deleting_threads)")
     cursor.execute("DELETE FROM threads WHERE id IN (SELECT id FROM deleting_threads)") 
     cursor.execute("DELETE FROM threads WHERE id IN (SELECT id FROM deleting_threads)")
@@ -212,9 +229,14 @@ def delete_old_tokens_accounts(cursor):
     cursor.execute("DELETE FROM hashes_of_valid_tokens")    
 
 
+def delete_old_push_notificaions(cursor):
+    cursor.execute("DELETE FROM push_notifications WHERE last_derivered_message_timestamp < %s", [get_timestamp() - UNSUBSCRIBE_TIMEOUT])
+
+
 def maintain(cursor):
     remove_unused_threads(cursor)
     delete_old_tokens_accounts(cursor)
+    delete_old_push_notificaions(cursor)
     
 
 def can_create_user(cursor, userhash, token=""):
@@ -504,3 +526,46 @@ def delete_account(cursor, token=""):
     cursor.execute("DELETE FROM tokens WHERE account = %s", [account_id])
     cursor.execute("DELETE FROM accounts WHERE id = %s", [account_id])
     return {"status": "ok"}
+
+
+def push_subscribe(cursor, userhash, token="", subscription_information=dict()):
+    user_id = VALIDATE_ACCESS(cursor, userhash, token)
+    hash = my_uuid()
+    cursor.execute("""
+        INSERT INTO push_notifications
+            (user, subscription_information, vapid_private_key, last_derivered_message_timestamp, hash)
+            VALUES
+            (%s, AES_ENCRYPT(%s, %s), AES_ENCRYPT(%s, %s), %s, %s)
+        """, [user_id, json.dumps(subscription_information).encode('utf-8'), AES_KEY, VAPID_PRIVATE_KEY.encode('utf-8'), AES_KEY, get_timestamp(), hash]) 
+    return {"status": "ok", "hash": hash}
+    
+    
+def push_unsubscribe(cursor, userhash, token="", subscription_hash=""):
+    user_id = VALIDATE_ACCESS(cursor, userhash, token)
+    cursor.execute("DELETE FROM push_notifications WHERE user = %s AND (%s = '' OR hash = %s)", [user_id, subscription_hash, subscription_hash])
+    return {"status": "ok"}
+
+    
+def push_get_by_thread(cursor, thread_id):
+    cursor.execute("""
+        SELECT
+            pn.id, 
+            users.id,
+            users.hash,
+            threads.id,
+            AES_DECRYPT(pn.subscription_information, %s), 
+            AES_DECRYPT(pn.vapid_private_key, %s)
+        FROM 
+            push_notifications AS pn
+        JOIN
+            users ON (pn.user = users.id)
+        JOIN 
+            threads ON (threads.id = users.thread)
+        WHERE
+            threads.id = %s
+        """, [AES_KEY, AES_KEY, thread_id])
+    return {"status": "ok", 'data': [{'pn_id': pnid, 'user_id': uid, 'userhash': hash, 'thread_id': tid, 'subscription_information': json.loads(si.decode('utf-8')), 'vapid_private_key': vpk.decode('utf-8')} for pnid, uid, hash, tid, si, vpk in cursor]}
+
+
+def push_update_success(cursor, id):
+    cursor.execute("UPDATE push_notifications SET last_derivered_message_timestamp = %s WHERE id = %s", [get_timestamp(), id])

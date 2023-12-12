@@ -211,6 +211,21 @@ class Server:
     @decorator_pack
     def delete_account(self, cursor, token=""):
         return messenger.delete_account(cursor, token)
+    
+    
+    @decorator_pack
+    def push_subscribe(self, cursor, userhash, token="", subscription_information={}):
+        return messenger.push_subscribe(cursor, userhash, token, subscription_information)
+    
+    
+    @decorator_pack
+    def push_unsubscribe(self, cursor, userhash, token="", subscription_hash=""):
+        return messenger.push_unsubscribe(cursor, userhash, token, subscription_hash)
+    
+    
+    @decorator_pack
+    def push_public(self, *args, **kwargs):
+        return messenger.VAPID_PUBLIC_KEY
 
 
 class Root:

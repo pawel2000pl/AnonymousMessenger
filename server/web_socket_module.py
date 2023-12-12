@@ -8,6 +8,7 @@ from ws4py.websocket import WebSocket
 from ws4py.messaging import TextMessage
 from threading import Thread
 from time import time
+from pywebpush import webpush
 
 SUBSCRIBTIONS = defaultdict(set)
 NOTIFY_SUBSCRIBTION = defaultdict(set)
@@ -26,7 +27,31 @@ def propagate_message(cursor, thread_id, message_id):
         txt_msg = TextMessage(json.dumps({"action": "new_message", "userhash": ident}))        
         Thread(target=lambda ws=ws, msg=txt_msg: ws.send(msg)).start()
         
-        
+    active_users = set()
+    for s in SUBSCRIBTIONS.values():
+        active_users.update(o.userhash for o in s)
+    
+    for dest in messenger.push_get_by_thread(cursor, thread_id)['data']:
+        if dest['userhash'] == userhash or dest['userhash'] in active_users:
+            continue
+        message = {
+            'address': '/messages.html?userhash='+dest['userhash'], 
+            'from': msg['username'], 
+            'content': msg['content']
+        }
+        try:
+            webpush(
+                subscription_info=dest['subscription_information'],
+                data=json.dumps(message),
+                vapid_private_key=dest['vapid_private_key'],
+                vapid_claims=messenger.VAPID_CLAIMS
+            )
+            messenger.push_update_success(cursor, dest['pn_id'])
+        except Exception as e:
+            print(e)
+            pass
+
+
 @log_statistic
 def propagate_readed(userhash):
     for ws in  NOTIFY_SUBSCRIBTION_READED[userhash]:
