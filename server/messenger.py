@@ -19,12 +19,12 @@ DELETE_THREAD_TIME = 1000 * 3600 * 24 * 365
 DELETE_ACCOUNT_TIME = 1000 * 3600 * 24 * 365 * 3
 ACTIVATE_ACCOUNT_TIME = 1000 * 60 * 5
 UNSUBSCRIBE_TIMEOUT = 1000 * 3600 * 24 * 365
+MAX_SUBSCIPTIONS_PER_USER = 32
 
 CHANGES_USERNAME_MESSSAGE = "User *%s* has changed its nick to *%s*"
 CLOSE_USERNAME_MESSSAGE = "User *%s* has left from the chat"
 CREATE_NEW_CHAT_MESSAGE = "User *%s* has created the new chat with name *%s*"
 ADD_NEW_USER_MESSAGE = "User *%s* has added the new user *%s*"
-MAX_SUBSCIPTIONS_PER_USER = 32
 
 DATABASE_HOST = os.getenv("DATABASE_HOST")
 DATABASE_NAME = os.getenv("DATABASE_NAME")

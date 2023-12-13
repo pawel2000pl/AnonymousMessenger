@@ -189,7 +189,7 @@ class Server:
 
 
     @decorator_pack
-    def login(self, cursor, login, password, no_activity_lifespan=3600, max_lifespan=604800):
+    def login(self, cursor, login, password, no_activity_lifespan=12*3600, max_lifespan=604800):
         return messenger.login(cursor, login, password, no_activity_lifespan=no_activity_lifespan, max_lifespan=max_lifespan)
 
 
