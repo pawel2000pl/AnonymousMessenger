@@ -24,6 +24,7 @@ CHANGES_USERNAME_MESSSAGE = "User *%s* has changed its nick to *%s*"
 CLOSE_USERNAME_MESSSAGE = "User *%s* has left from the chat"
 CREATE_NEW_CHAT_MESSAGE = "User *%s* has created the new chat with name *%s*"
 ADD_NEW_USER_MESSAGE = "User *%s* has added the new user *%s*"
+MAX_SUBSCIPTIONS_PER_USER = 32
 
 DATABASE_HOST = os.getenv("DATABASE_HOST")
 DATABASE_NAME = os.getenv("DATABASE_NAME")
@@ -229,8 +230,31 @@ def delete_old_tokens_accounts(cursor):
     cursor.execute("DELETE FROM hashes_of_valid_tokens")    
 
 
-def delete_old_push_notificaions(cursor):
-    cursor.execute("DELETE FROM push_notifications WHERE last_derivered_message_timestamp < %s", [get_timestamp() - UNSUBSCRIBE_TIMEOUT])
+def delete_old_push_notificaions(cursor):    
+    cursor.execute("CREATE TEMPORARY TABLE IF NOT EXISTS pn_to_delete (id BIGINT)")
+    cursor.execute(f"""
+        INSERT INTO 
+            pn_to_delete
+        SELECT
+            id
+        FROM
+            push_notifications
+        WHERE
+            last_derivered_message_timestamp <= (
+                SELECT
+                    pn.last_derivered_message_timestamp
+                FROM
+                    push_notifications AS pn
+                WHERE
+                    pn.user = push_notifications.user
+                ORDER BY
+                    pn.last_derivered_message_timestamp
+                LIMIT 1
+                OFFSET {MAX_SUBSCIPTIONS_PER_USER}
+            )
+        """)    
+    cursor.execute("DELETE FROM push_notifications WHERE id IN (SELECT id FROM pn_to_delete)")
+    cursor.execute("DELETE FROM pn_to_delete")
 
 
 def maintain(cursor):
