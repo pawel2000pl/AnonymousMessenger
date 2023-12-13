@@ -115,7 +115,6 @@ async function initializePushSubscriber() {
         }).then(function(subscription) {
             console.log('User is subscribed.');
             unsubscribeThis().then(()=>{subscribeOnServer(subscription)});
-            localStorage.setItem('sub_token', JSON.stringify(subscription));
 
         }).catch(function(err) {
             console.log('Failed to subscribe the user: ', err);
