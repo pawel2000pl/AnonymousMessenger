@@ -21,7 +21,7 @@ const deleteAccountdBtn = document.getElementById('delete-account-btn');
 
 chatNameInput.addEventListener('keypress', (event)=>{
     if (event.key == "Enter") {
-        event.preventDefault()
+        event.preventDefault();
         firstUserInput.focus();
     }
 });
@@ -29,7 +29,7 @@ chatNameInput.addEventListener('keypress', (event)=>{
 
 firstUserInput.addEventListener('keypress', (event)=>{
     if (event.key == "Enter") {
-        event.preventDefault()
+        event.preventDefault();
         createNewChatBtn.click();
     }
 });
@@ -58,7 +58,7 @@ createNewChatBtn.addEventListener('click', async ()=>{
 
 userHashInput.addEventListener('keypress', (event)=>{
     if (event.key == "Enter") {
-        event.preventDefault()
+        event.preventDefault();
         joinChatBtn.click();
     }
 });
@@ -89,7 +89,7 @@ joinChatBtn.addEventListener('click', async ()=>{
 
 accountLogin.addEventListener('keypress', (event)=>{
     if (event.key == "Enter") {
-        event.preventDefault()
+        event.preventDefault();
         accountPassword.focus();
     }
 });
@@ -97,7 +97,7 @@ accountLogin.addEventListener('keypress', (event)=>{
 
 accountPassword.addEventListener('keypress', (event)=>{
     if (event.key == "Enter") {
-        event.preventDefault()
+        event.preventDefault();
         loginBtn.click();
     }
 });
@@ -154,7 +154,7 @@ deleteAccountdBtn.addEventListener('click', async ()=>{
         method: "post",
         headers: {
             "Content-Type": "application/json"
-        },        
+        },
         body: JSON.stringify({
             token: localStorage.token??""
         }),

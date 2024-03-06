@@ -24,8 +24,8 @@ if (window.innerHeight > window.innerWidth)
 
 const sleep = function (ms) {
     return new Promise((resolve)=>setTimeout(resolve, ms));
-}
-    
+};
+
 const createMessageCloud = function(messageData) {
     let message = document.createElement('div');
     let content = document.createElement('div');
@@ -39,7 +39,7 @@ const createMessageCloud = function(messageData) {
     header.className = "message-header " + (messageData.me?"my-message-header":"regular-message-header");
     if (messageData.system)
         header.innerHTML = "<i>System</i>";
-    let date = new Date(messageData.timestamp); 
+    let date = new Date(messageData.timestamp);
     timestamp.textContent = date.toLocaleString();
     timestamp.className = "message-timestamp " + (messageData.me?"my-messege-timestamp":"regular-message-timestamp");
     message.appendChild(header);
@@ -48,7 +48,7 @@ const createMessageCloud = function(messageData) {
     message.appendChild(timestamp);
     message.className = "message-cloud " + (messageData.me?"my-messege":"regular-message");
     return message;
-}
+};
 
 const setToArray = function(set) {
     let result = new Array();
@@ -57,23 +57,23 @@ const setToArray = function(set) {
         result[i++] = element;
     });
     return result;
-}
+};
 
 function realHeight(el) {
-    el = (typeof el === 'string') ? document.querySelector(el) : el; 
-  
+    el = (typeof el === 'string') ? document.querySelector(el) : el;
+
     var styles = window.getComputedStyle(el);
     var margin = Math.max(parseFloat(styles['marginTop']),
                  parseFloat(styles['marginBottom']));
-  
+
     return Math.ceil(el.offsetHeight + margin);
-  }
+}
 
 const addMessages = function(newMessagesList){
     let halfHeight = messagesList.scrollTop + messagesList.scrollHeight/2;
     let currentHeight = 0;
     let halfIndex = 0;
-    for (let i=0;i<messagesList.children.length;i++) 
+    for (let i=0;i<messagesList.children.length;i++)
         if (halfHeight <= currentHeight && halfHeight >= currentHeight + realHeight(messagesList.children[i])) {
             halfIndex = i;
             break;
@@ -89,7 +89,7 @@ const addMessages = function(newMessagesList){
     for (let i=0;i<newMessagesList.length;i++) {
         if (!messageIds.has(newMessagesList[i].id)) {
             let newCloud = createMessageCloud(newMessagesList[i]);
-            if (messagesList.children.length == 0 || messagesList.lastChild.data.timestamp < newMessagesList[i].timestamp) 
+            if (messagesList.children.length == 0 || messagesList.lastChild.data.timestamp < newMessagesList[i].timestamp)
                 messagesList.appendChild(newCloud);
             else if (messagesList.firstElementChild.data.timestamp > newMessagesList[i].timestamp) {
                 messagesList.insertBefore(newCloud, messagesList.firstElementChild);
@@ -114,16 +114,17 @@ const addMessages = function(newMessagesList){
     }
     if (count) {
         if (addedBefore > count/2) {
-            while (messagesList.children.length > messageLimitOnList) 
+            while (messagesList.children.length > messageLimitOnList)
                 messagesList.removeChild(messagesList.lastElementChild);
         } else {
-            while (messagesList.children.length > messageLimitOnList) 
+            while (messagesList.children.length > messageLimitOnList)
                 messagesList.removeChild(messagesList.firstChild);
         }
     }
     messagesList.scrollTop += scrollTopOffset;
     return count;
-}
+};
+
 
 const checkWs = async function(trials=50, timeout=100) {
     for (let i=0;i<trials;i++) {
@@ -132,7 +133,8 @@ const checkWs = async function(trials=50, timeout=100) {
         await sleep(timeout);
     }
     return false;
-}
+};
+
 
 const sendMessage = async function() {
     const message = messageEditor.innerText;
@@ -140,20 +142,22 @@ const sendMessage = async function() {
         return;
     messageEditor.disabled = "disabled";
     try
-    { 
+    {
         if (await checkWs()) {
             ws.send(JSON.stringify({"action": "message", "message": message}));
             messageEditor.textContent = "";
             messageOffset = 0;
             messagesList.scrollTop = messagesList.scrollHeight;
-        } else 
+        } else
             alert(translate("Cannot send the message"));
     } finally {
         messageEditor.disabled = "";
     }
 };
 
+
 sendMessageBtn.addEventListener('click', sendMessage);
+
 
 messageEditor.addEventListener('keypress', (event)=>{
     if (event.key == "Enter" && event.shiftKey != true) {
@@ -161,6 +165,7 @@ messageEditor.addEventListener('keypress', (event)=>{
         sendMessage();
     }
 });
+
 
 const setNewMessageAsReaded = function() {
     if (messagesList.scrollTop >= messagesList.scrollHeight-messagesList.clientHeight-1) {
@@ -170,12 +175,15 @@ const setNewMessageAsReaded = function() {
     }
 };
 
+
 messagesList.addEventListener('scroll', setNewMessageAsReaded);
+
 
 const showNewMessagesLabel = function() {
     setNewMessageAsReaded();
     newMessagesLabel.style.display = isNewMessage?"":"none";
-}
+};
+
 
 newMessagesLabel.addEventListener('click', async ()=>{
     messageOffset = 0;
@@ -188,6 +196,7 @@ newMessagesLabel.addEventListener('click', async ()=>{
     };
     ws.send(JSON.stringify(data));
 });
+
 
 var scrollEVents = 0;
 messagesList.addEventListener('scroll', async ()=>{
@@ -211,7 +220,7 @@ messagesList.addEventListener('scroll', async ()=>{
         }
     }
 
-    if (!need_new) 
+    if (!need_new)
         return;
 
     let messageIds = new Array(messagesList.children.length);
@@ -232,6 +241,7 @@ messagesList.addEventListener('scroll', async ()=>{
 
 setInterval(showNewMessagesLabel, 300);
 
+
 const connectWS = function () {
     const protocol = window.location.protocol == "http:" ? "ws:" : "wss:";
     ws = new WebSocket(protocol + "//"+window.location.host+"/ws");
@@ -249,7 +259,7 @@ const connectWS = function () {
     ws.onmessage = (message)=>{
         let data = JSON.parse(message.data);
         let messages = data.messages;
-        if (data.action == "new_message") { 
+        if (data.action == "new_message") {
             let playSound = false;
             isNewMessage = true;
             for (let i=0;i<messages.length;i++) {
@@ -259,7 +269,7 @@ const connectWS = function () {
                 addMessages(messages);
                 if (messagesList.scrollTop >= messagesList.scrollHeight - 3/2*messagesList.clientHeight - 1) {
                     messagesList.scrollTop = messagesList.scrollHeight;
-                    while (messagesList.children.length > messageLimitOnList) 
+                    while (messagesList.children.length > messageLimitOnList)
                         messagesList.removeChild(messagesList.firstElementChild);
                 }
             }
@@ -278,9 +288,11 @@ const connectWS = function () {
     ws.onclose = ()=>{setTimeout(connectWS, MESSAGE_SYNC_INTERVAL)};
 };
 
+
 window.addEventListener('beforeunload', ()=>{
     ws.onclose = ()=>{};
     ws.close()
 });
+
 
 permissionChecks.then(ensureAccessIsValid).then(connectWS);

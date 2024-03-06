@@ -5,7 +5,7 @@ const translate = function(text) {
     if (dataLanguage[text])
         return dataLanguage[text];
     return text;
-}
+};
 
 const translateAll = function() {
     const keys = ['innerText', 'value', 'textContent'];
@@ -52,7 +52,7 @@ const init = async function() {
         summary.textContent = dataLanguage.__language_name__;
         summary.onblur = ()=>{setTimeout(()=>{element.open = '';}, 250);};
         element.appendChild(summary);
-        
+
         langList.forEach((lang)=>{
             let option = document.createElement('div');
             option.textContent = lang;

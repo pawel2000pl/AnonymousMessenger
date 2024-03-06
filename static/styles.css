@@ -1,8 +1,8 @@
 :root {
-    --font-size: 1.2vmax; 
+    --font-size: 1.2vmax;
     /* --font-size: 0.5cm; */
 }
-  
+
 body {
     color: rgb(223, 223, 223);
     background-color: rgb(36, 36, 36);
@@ -235,12 +235,12 @@ hr {
 
 .my-messege {
     background-color: rgb(58, 58, 58);
-    margin-left: auto; 
+    margin-left: auto;
 }
 
 .regular-message {
     background-color: rgb(81, 81, 81);
-    margin-right: auto; 
+    margin-right: auto;
 }
 
 #new-messages-label {
@@ -248,7 +248,7 @@ hr {
     float: left;
     height: 24px;
     margin-left: 30vw;
-    margin-top: -24px; 
+    margin-top: -24px;
     padding-left: 12px;
     padding-right: 12px;
     border-radius: 15px 15px 0px 0px;
@@ -263,7 +263,7 @@ hr {
 }
 
 #menu-button {
-    display: block; 
+    display: block;
     position: absolute;
     left: 0px;
     top: 0px;
@@ -306,9 +306,9 @@ hr {
 }
 
 #logo-in-menu {
-    height: 3vmax; 
-    padding-left: calc(2.5 * var(--font-size)); 
-    padding-top: calc(0.3 * var(--font-size)); 
+    height: 3vmax;
+    padding-left: calc(2.5 * var(--font-size));
+    padding-top: calc(0.3 * var(--font-size));
     font-weight: bolder;
     font-size: calc(1.1 * var(--font-size));
     cursor: pointer;
@@ -319,7 +319,7 @@ hr {
     bottom: 0px;
     left: 0px;
     font-size: smaller;
-    color: gray;  
+    color: gray;
     z-index: -1;
 }
 

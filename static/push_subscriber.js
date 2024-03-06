@@ -2,6 +2,7 @@ const subscribeBtn = document.getElementById('subscribe-pn-btn');
 const unsubscribeBtn = document.getElementById('unsubscribe-pn-btn');
 const unsubscribeAllBtn = document.getElementById('unsubscribe-all-pn-btn');
 
+
 function urlB64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding)
@@ -16,9 +17,9 @@ function urlB64ToUint8Array(base64String) {
     return outputArray;
 }
 
+
 function initializeUI() {
 
-    // Set the initial subscription value
     swRegistration.pushManager.getSubscription()
         .then(function(subscription) {
             isSubscribed = !(subscription === null);
@@ -33,7 +34,8 @@ function initializeUI() {
 
             updateBtn();
         });
-}
+};
+
 
 async function subscribeOnServer(subscribtion) {
     if (!subscribtion)
@@ -53,6 +55,7 @@ async function subscribeOnServer(subscribtion) {
     localStorage['push_messages_notification'] = data['hash'];
 }
 
+
 async function unsubscribeThis() {
     if (!localStorage['push_messages_notification'])
         return;
@@ -69,6 +72,7 @@ async function unsubscribeThis() {
     });
 }
 
+
 async function unsubscribeAll() {
     await fetch('/query/push_unsubscribe', {
         method: "post",
@@ -82,14 +86,11 @@ async function unsubscribeAll() {
     });
 }
 
-async function initializePushSubscriber() {
 
-    let isSubscribed = false;
-    let swRegistration = null;
+async function initializePushSubscriber() {
 
     const applicationServerPublicKey = await fetch('/query/push_public').then((response)=>{return response.json()});
     const applicationServerKey = urlB64ToUint8Array(applicationServerPublicKey);
-        
 
     const subscribe = async function() {
         let swRegistration = null;
@@ -108,14 +109,13 @@ async function initializePushSubscriber() {
             alert(translate('Notifications are not supported in this device'));
             pushButton.textContent = 'Push Not Supported';
         }
-        
+
         swRegistration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: applicationServerKey
         }).then(function(subscription) {
             console.log('User is subscribed.');
             unsubscribeThis().then(()=>{subscribeOnServer(subscription)});
-
         }).catch(function(err) {
             console.log('Failed to subscribe the user: ', err);
         });
@@ -126,5 +126,6 @@ async function initializePushSubscriber() {
     unsubscribeAllBtn.onclick = unsubscribeAll;
 
 }
+
 
 initializePushSubscriber();

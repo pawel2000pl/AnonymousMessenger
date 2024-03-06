@@ -20,6 +20,9 @@ COPY mysql "$APP_PATH/mysql"
 RUN bash mysql/install_transient_mysql.sh
 
 COPY . "$APP_PATH/"
+RUN find "$APP_PATH/static" -name "*.html" -exec python3 "$APP_PATH/static_minifier.py" {} \;
+RUN find "$APP_PATH/static" -name "*.css" -exec python3 "$APP_PATH/static_minifier.py" {} \;
+RUN find "$APP_PATH/static" -name "*.js" -exec python3 "$APP_PATH/static_minifier.py" {} \;
 
 EXPOSE 8080
 CMD bash start.sh

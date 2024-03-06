@@ -67,19 +67,19 @@ const connectWsChatList = async function() {
         const table = chatList.firstElementChild;
         for (let i=0;i<table.children.length;i++)
             if (table.children[i].userhash)
-                ws.send(JSON.stringify({"action": "subscribe", "userhash": table.children[i].userhash, token: localStorage.token??""}));   
+                ws.send(JSON.stringify({"action": "subscribe", "userhash": table.children[i].userhash, token: localStorage.token??""}));
     };
     ws.onmessage = (message)=>{
         let data = JSON.parse(message.data);
         const table = chatList.firstElementChild;
-        if (data.action == "message_readed") 
+        if (data.action == "message_readed")
             for (let i=0;i<table.children.length;i++)
                 if (table.children[i].userhash == data.userhash) {
                     table.children[i].className = "class-list-row";
                     table.children[i].lastElementChild.firstElementChild.textContent = "";
                     break;
                 }
-        if (data.action == "new_message") 
+        if (data.action == "new_message")
             for (let i=0;i<table.children.length;i++)
                 if (table.children[i].userhash == data.userhash) {
                     table.children[i].className = "class-list-row class-list-row-unread";

@@ -41,7 +41,7 @@ const checkCanCreate = async function() {
         }),
     });
     let result = await response.json();
-    if (result['status'] == "ok" && result['result']) 
+    if (result['status'] == "ok" && result['result'])
         return;
     generateNewUserDiv.style.display = "none";
 };
@@ -79,7 +79,7 @@ closeUserBtn.addEventListener('click', async ()=>{
         }),
     });
     let result = await response.json();
-    if (result['status'] == "ok") {        
+    if (result['status'] == "ok") {
         window.location = window.location.origin;
     } else
         alert(translate('Cannot remove the user'));

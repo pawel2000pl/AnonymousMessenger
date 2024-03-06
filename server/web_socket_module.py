@@ -22,21 +22,21 @@ def propagate_message(cursor, thread_id, message_id):
         msg['me'] = userhash == ws.userhash
         txt_msg = TextMessage(json.dumps({"action": "new_message", "messages": [msg]}))
         Thread(target=lambda ws=ws, msg=txt_msg: ws.send(msg)).start()
-    
+
     for ws, ident in NOTIFY_SUBSCRIBTION[thread_id]:
-        txt_msg = TextMessage(json.dumps({"action": "new_message", "userhash": ident}))        
+        txt_msg = TextMessage(json.dumps({"action": "new_message", "userhash": ident}))
         Thread(target=lambda ws=ws, msg=txt_msg: ws.send(msg)).start()
-        
+
     active_users = set()
     for s in SUBSCRIBTIONS.values():
         active_users.update(o.userhash for o in s)
-    
+
     for dest in messenger.push_get_by_thread(cursor, thread_id)['data']:
         if dest['userhash'] == userhash or dest['userhash'] in active_users:
             continue
         message = {
-            'address': '/messages.html?userhash='+dest['userhash'], 
-            'from': msg['username'], 
+            'address': '/messages.html?userhash='+dest['userhash'],
+            'from': msg['username'],
             'content': msg['content']
         }
         try:
@@ -55,85 +55,89 @@ def propagate_message(cursor, thread_id, message_id):
 @log_statistic
 def propagate_readed(userhash):
     for ws in  NOTIFY_SUBSCRIBTION_READED[userhash]:
-        txt_msg = TextMessage(json.dumps({"action": "message_readed", "userhash": userhash}))     
+        txt_msg = TextMessage(json.dumps({"action": "message_readed", "userhash": userhash}))
         Thread(target=lambda ws=ws, msg=txt_msg:ws.send(msg)).start()
-        
+
 
 class ChatWebSocketHandler(WebSocket):
-    
+
     def __init__(self, sock, protocols=None, extensions=None, environ=None, heartbeat_freq=None):
         super().__init__(sock, protocols, extensions, environ, heartbeat_freq)
         self.userhash = ""
         self.token = ""
         self.thread_id = ""
         self.connectTime = time()
-    
+
+
     def received_message(self, message: TextMessage):
         try:
             content = json.loads(message.data.decode(message.encoding))
             action = content.get('action', '')
             connection = messenger.get_database_connection()
             cursor = connection.cursor()
-            
-            if action == 'subscribe':           
+
+            if action == 'subscribe':
                 self.userhash = content.get('userhash', '')
                 self.token = content.get('token', '')
                 self.thread_id = messenger.get_thread_id(cursor, self.userhash, self.token)
                 SUBSCRIBTIONS[self.thread_id].add(self)
-                
+
             if action == 'message':
                 text = content.get('message', '')
                 sent_result = messenger.send_message(cursor, self.userhash, text, token=self.token)
                 connection.commit()
                 if sent_result['status'] == "ok":
                     propagate_message(connection.cursor(), self.thread_id, sent_result['message_id'])
-                    
+
             if action == 'set_as_readed':
                 messenger.set_user_read(cursor, self.userhash, self.token)
                 propagate_readed(self.userhash)
                 connection.commit()
-                
+
             if action == 'get_messages' or action == 'get_newest':
                 text = content.get('message', '')
                 result = messenger.get_messages(
-                    cursor, 
-                    self.userhash, 
-                    content.get('offset', 0), 
-                    content.get('limit', 64), 
-                    content.get('id_bookmark', 0), 
-                    content.get('id_direction', 0), 
-                    content.get('excludeList', []), 
+                    cursor,
+                    self.userhash,
+                    content.get('offset', 0),
+                    content.get('limit', 64),
+                    content.get('id_bookmark', 0),
+                    content.get('id_direction', 0),
+                    content.get('excludeList', []),
                     self.token)
                 if result['status'] == 'ok':
                     self.send(TextMessage(json.dumps({"action": "ordered_messages", "newest": action == 'get_newest', "messages": result['messages']})))
         except Exception as err:
-            log_error(err)                 
+            log_error(err)
+
 
     def closed(self, code, reason=""):
         try:
             cherrypy.log('Connection %s closed'%self.userhash[:8])
             if self.thread_id in SUBSCRIBTIONS and self in SUBSCRIBTIONS[self.thread_id]:
-                SUBSCRIBTIONS[self.thread_id].remove(self)        
+                SUBSCRIBTIONS[self.thread_id].remove(self)
         except Exception as err:
-            log_error(err)   
-        
+            log_error(err)
+
+
 class NotifyWebSocketHandler(WebSocket):
-    
+
     def __init__(self, sock, protocols=None, extensions=None, environ=None, heartbeat_freq=None):
         super().__init__(sock, protocols, extensions, environ, heartbeat_freq)
         self.userhash = []
         self.token = ""
         self.thread_id = []
         self.connectTime = time()
-        
+
+
     def received_message(self, message: TextMessage):
         try:
             content = json.loads(message.data.decode(message.encoding))
             action = content.get('action', '')
             connection = messenger.get_database_connection()
             cursor = connection.cursor()
-            
-            if action == 'subscribe':           
+
+            if action == 'subscribe':
                 current_hash = content.get('userhash', '')
                 self.userhash.append(current_hash)
                 self.token = content.get('token', '')
@@ -142,8 +146,9 @@ class NotifyWebSocketHandler(WebSocket):
                 NOTIFY_SUBSCRIBTION[current_thread_id].add((self, current_hash))
                 NOTIFY_SUBSCRIBTION_READED[current_hash].add(self)
         except Exception as err:
-            log_error(err)   
-            
+            log_error(err)
+
+
     def closed(self, code, reason=""):
         try:
             cherrypy.log('Multi connection %s closed'%self.token[:8])
@@ -156,12 +161,12 @@ class NotifyWebSocketHandler(WebSocket):
                 if self in NOTIFY_SUBSCRIBTION_READED[userhash] and self in NOTIFY_SUBSCRIBTION_READED[userhash]:
                     NOTIFY_SUBSCRIBTION_READED[userhash].remove(self)
         except Exception as err:
-            log_error(err)   
-        
-        
+            log_error(err)
+
+
 def clean_old_connections():
     current_time = time()
-    
+
     for k in list(SUBSCRIBTIONS.keys()):
         for connection in list(SUBSCRIBTIONS[k]):
             if current_time - connection.connectTime > MAX_CONNECTION_TIME:
@@ -169,15 +174,15 @@ def clean_old_connections():
                 connection.close()
         if len(SUBSCRIBTIONS[k]) == 0:
             SUBSCRIBTIONS.pop(k)
-    
+
     for k in list(NOTIFY_SUBSCRIBTION.keys()):
-        outdated_connections = set(connection for connection, _ in NOTIFY_SUBSCRIBTION[k] if current_time - connection.connectTime > MAX_CONNECTION_TIME)        
+        outdated_connections = set(connection for connection, _ in NOTIFY_SUBSCRIBTION[k] if current_time - connection.connectTime > MAX_CONNECTION_TIME)
         NOTIFY_SUBSCRIBTION[k] = set((connection, hash) for connection, hash in NOTIFY_SUBSCRIBTION[k] if connection not in outdated_connections)
         for connection in outdated_connections:
             connection.close()
         if len(NOTIFY_SUBSCRIBTION[k]) == 0:
             NOTIFY_SUBSCRIBTION.pop(k)
-            
+
     for k in list(NOTIFY_SUBSCRIBTION_READED.keys()):
         for connection in list(NOTIFY_SUBSCRIBTION_READED[k]):
             if current_time - connection.connectTime > MAX_CONNECTION_TIME:

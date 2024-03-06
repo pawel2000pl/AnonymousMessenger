@@ -54,15 +54,15 @@ def get_database_connection():
         password = DATABASE_PASS,
         database = DATABASE_NAME,
         port = DATABASE_POTR)
-    
+
 
 HASH_VALID_CHARS = set("qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890-_+=")
 VALIDATE_ACCESS_QUERY = """
-        SELECT 
-            users.id 
-        FROM 
-            users 
-        LEFT JOIN 
+        SELECT
+            users.id
+        FROM
+            users
+        LEFT JOIN
             account_tokens ON (account_tokens.id = users.account)
         WHERE
             users.hash = %s
@@ -71,9 +71,9 @@ VALIDATE_ACCESS_QUERY = """
         AND
             (users.account IS NULL OR account_tokens.hash = %s)
         LIMIT 1
-        """   
-        
-        
+        """
+
+
 def remove_unsafe_chars(test):
     return str().join(c for c in str(test) if c in HASH_VALID_CHARS)
 
@@ -81,11 +81,11 @@ def remove_unsafe_chars(test):
 def insert_inline_token_query(userhash, token):
     return VALIDATE_ACCESS_QUERY%(remove_unsafe_chars(userhash), remove_unsafe_chars(token))
 
-    
+
 def my_uuid():
-    with open(RANDOM_DEVICE, "rb") as f:        
+    with open(RANDOM_DEVICE, "rb") as f:
         return sha256(f.read(64*1024)).hexdigest()
-    
+
 
 def random_sleep(_min=0.01, _max=0.1):
     sleep(_min+(_max-_min)*random())
@@ -93,10 +93,10 @@ def random_sleep(_min=0.01, _max=0.1):
 
 def get_timestamp():
     return round(time()*1000+0.5)
-    
-    
+
+
 def cursor_provider(fun):
-    
+
     @wraps(fun)
     def decorator(*args, **kwargs):
         connection = get_database_connection()
@@ -108,18 +108,18 @@ def cursor_provider(fun):
         except Exception as err:
             connection.rollback()
             raise err
-    
+
     return decorator
-        
-        
+
+
 def VALIDATE_ACCESS(cursor, userhash, token):
-    cursor.execute(VALIDATE_ACCESS_QUERY, [userhash, token])    
+    cursor.execute(VALIDATE_ACCESS_QUERY, [userhash, token])
     user_id, = cursor.fetchone()
     return user_id
 
 
 def is_access_valid(cursor, userhash, token):
-    cursor.execute(f"SELECT COUNT(*) FROM ({VALIDATE_ACCESS_QUERY}) AS tmp", [userhash, token])    
+    cursor.execute(f"SELECT COUNT(*) FROM ({VALIDATE_ACCESS_QUERY}) AS tmp", [userhash, token])
     count, = cursor.fetchone()
     return {"status": "ok", "result": count>0}
 
@@ -129,28 +129,28 @@ def add_user_to_account(cursor, userhash, token):
     if result["result"]:
         set_user_to_account(cursor, userhash, token)
     return result
-        
+
 
 def get_thread_id(cursor, userhash, token=""):
     cursor.execute(f"""
-        SELECT 
+        SELECT
             users.thread
-        FROM 
+        FROM
             users
-        WHERE 
+        WHERE
             users.id = ({VALIDATE_ACCESS_QUERY})
         LIMIT 1
         """, [userhash, token])
     thread_id, = cursor.fetchone()
     return thread_id
-    
+
 
 def thread_exists(cursor, thread_id):
     cursor.execute("SELECT COUNT(*) FROM threads WHERE id = %s", [thread_id])
     count, = cursor.fetchone()
-    return count > 0    
+    return count > 0
 
-    
+
 def send_message(cursor, userhash, content, system_message=False, token=""):
     if len(content) == 0:
         return {"status": "error", "message": "NO_CONTENT"}
@@ -161,14 +161,14 @@ def send_message(cursor, userhash, content, system_message=False, token=""):
         INSERT INTO messages (user, timestamp, content, is_system)
         SELECT
             id,
-            %s, 
-            AES_ENCRYPT(COMPRESS(%s), %s), 
-            %s 
+            %s,
+            AES_ENCRYPT(COMPRESS(%s), %s),
+            %s
         FROM
             users
-        WHERE 
-            users.id = ({VALIDATE_ACCESS_QUERY}) 
-        AND 
+        WHERE
+            users.id = ({VALIDATE_ACCESS_QUERY})
+        AND
             users.closed = 0
         LIMIT 1
         """, [get_timestamp(), str(content).encode('utf-8'), AES_KEY, sysMsg, userhash, token])
@@ -177,7 +177,7 @@ def send_message(cursor, userhash, content, system_message=False, token=""):
 
 def change_username(cursor, userhash, new_username, send_message=True, token=""):
     if new_username is None or len(new_username) == 0 or len(new_username) > MAX_USERNAME_LENGTH:
-        new_username = "User-%d"%round(100000*random())    
+        new_username = "User-%d"%round(100000*random())
     user_id = VALIDATE_ACCESS(cursor, userhash, token)
     execute = lambda: cursor.execute("UPDATE users SET username = %s WHERE id = %s", [new_username, user_id])
     if send_message:
@@ -187,16 +187,16 @@ def change_username(cursor, userhash, new_username, send_message=True, token="")
         send_message(cursor, userhash, CHANGES_USERNAME_MESSSAGE%(old_username, new_username))
     else:
         execute()
-    
+
     return {"status": "ok"}
-    
-    
+
+
 def remove_unused_threads(cursor):
     cursor.execute("CREATE TEMPORARY TABLE IF NOT EXISTS deleting_threads (id INTEGER)")
     cursor.execute("DELETE FROM deleting_threads")
     cursor.execute("""
-        INSERT INTO deleting_threads 
-        SELECT 
+        INSERT INTO deleting_threads
+        SELECT
             threads.id
         FROM
             threads
@@ -214,26 +214,26 @@ def remove_unused_threads(cursor):
     cursor.execute("DELETE FROM messages WHERE user IN (SELECT users.id FROM users JOIN deleting_threads ON (users.thread = deleting_threads.id))")
     cursor.execute("DELETE FROM push_notifications WHERE user IN (SELECT users.id FROM deleting_threads JOIN users ON (users.thread = deleting_threads.id))")
     cursor.execute("DELETE FROM users WHERE thread IN (SELECT id FROM deleting_threads)")
-    cursor.execute("DELETE FROM threads WHERE id IN (SELECT id FROM deleting_threads)") 
     cursor.execute("DELETE FROM threads WHERE id IN (SELECT id FROM deleting_threads)")
-    cursor.execute("DELETE FROM deleting_threads")    
+    cursor.execute("DELETE FROM threads WHERE id IN (SELECT id FROM deleting_threads)")
+    cursor.execute("DELETE FROM deleting_threads")
 
 
 def delete_old_tokens_accounts(cursor):
     cursor.execute("CREATE TEMPORARY TABLE IF NOT EXISTS hashes_of_valid_tokens (hash LONGTEXT)")
-    cursor.execute("DELETE FROM hashes_of_valid_tokens")    
-    cursor.execute("INSERT INTO hashes_of_valid_tokens SELECT hash FROM valid_tokens") 
+    cursor.execute("DELETE FROM hashes_of_valid_tokens")
+    cursor.execute("INSERT INTO hashes_of_valid_tokens SELECT hash FROM valid_tokens")
     cursor.execute("DELETE FROM tokens WHERE hash NOT IN (SELECT hash FROM hashes_of_valid_tokens)")
     cursor.execute("DELETE FROM tokens WHERE account IN (SELECT id FROM accounts WHERE last_login_timestamp < UNIX_TIMESTAMP() * 1000 - %s)", [DELETE_ACCOUNT_TIME])
     cursor.execute("UPDATE users SET account = NULL AND closed = 1 WHERE account IN (SELECT id FROM accounts WHERE last_login_timestamp < UNIX_TIMESTAMP() * 1000 - %s)", [DELETE_ACCOUNT_TIME])
     cursor.execute("DELETE FROM accounts WHERE last_login_timestamp < UNIX_TIMESTAMP() * 1000 - %s", [DELETE_ACCOUNT_TIME])
-    cursor.execute("DELETE FROM hashes_of_valid_tokens")    
+    cursor.execute("DELETE FROM hashes_of_valid_tokens")
 
 
-def delete_old_push_notificaions(cursor):    
+def delete_old_push_notificaions(cursor):
     cursor.execute("CREATE TEMPORARY TABLE IF NOT EXISTS pn_to_delete (id BIGINT)")
     cursor.execute(f"""
-        INSERT INTO 
+        INSERT INTO
             pn_to_delete
         SELECT
             id
@@ -252,7 +252,7 @@ def delete_old_push_notificaions(cursor):
                 LIMIT 1
                 OFFSET {MAX_SUBSCIPTIONS_PER_USER}
             )
-        """)    
+        """)
     cursor.execute("DELETE FROM push_notifications WHERE id IN (SELECT id FROM pn_to_delete)")
     cursor.execute("DELETE FROM pn_to_delete")
 
@@ -261,7 +261,7 @@ def maintain(cursor):
     remove_unused_threads(cursor)
     delete_old_tokens_accounts(cursor)
     delete_old_push_notificaions(cursor)
-    
+
 
 def can_create_user(cursor, userhash, token=""):
     cursor.execute(f"SELECT can_create FROM users WHERE id = ({VALIDATE_ACCESS_QUERY})", [userhash, token])
@@ -275,33 +275,33 @@ def close_user(cursor, userhash, token=""):
     username, = cursor.fetchone()
     result = send_message(cursor, userhash, CLOSE_USERNAME_MESSSAGE%username, True, token)
     cursor.execute("""
-        UPDATE 
-            users 
-        SET 
-            closed = 1, 
+        UPDATE
+            users
+        SET
+            closed = 1,
             account = NULL,
-            username = 
+            username =
                 (
-                    WITH RECURSIVE cte AS 
+                    WITH RECURSIVE cte AS
                     (
-                        SELECT 
-                            CONCAT("[deleted] ", u1.username, " #") AS username, 
-                            0 AS NO 
-                        FROM 
-                            users AS u1 
-                        WHERE 
-                            u1.id = %s 
-                        UNION 
-                        SELECT 
-                            cte.username, 
-                            cte.NO+1 
-                        FROM 
-                            cte 
-                        WHERE 
+                        SELECT
+                            CONCAT("[deleted] ", u1.username, " #") AS username,
+                            0 AS NO
+                        FROM
+                            users AS u1
+                        WHERE
+                            u1.id = %s
+                        UNION
+                        SELECT
+                            cte.username,
+                            cte.NO+1
+                        FROM
+                            cte
+                        WHERE
                             CONCAT(username, (NO+1)) IN (SELECT u2.username FROM users AS u2)
                     ) SELECT CONCAT(username, (MAX(NO)+1)) FROM cte GROUP BY cte.username
                 )
-        WHERE 
+        WHERE
             id = %s
         """, [user_id, user_id])
     return result
@@ -315,23 +315,23 @@ def reset_user_hash(cursor, userhash, token=""):
             cursor.execute("UPDATE users SET hash = %s WHERE id = %s", [new_userhash, user_id])
             break
         except mysql.connector.IntegrityError as _:
-            pass  
+            pass
     if i == 255:
         return {"status": "error", "message": "Cannot set the hash"}
-    return {"status": "ok", "userhash": new_userhash}  
+    return {"status": "ok", "userhash": new_userhash}
 
 
-def set_user_to_account(cursor, userhash, token):    
+def set_user_to_account(cursor, userhash, token):
     cursor.execute("UPDATE users SET account = (SELECT id FROM account_tokens WHERE hash = %s LIMIT 1) WHERE users.account IS NULL AND users.hash = %s", [token, userhash])
     return {"status": "ok"}
 
-    
+
 def add_user(cursor, create_on, username: str = None, can_create=True, token=""):
     send_notification = False
     creator_username = ""
     if isinstance(create_on, int):
         thread_id = create_on
-    else:          
+    else:
         cursor.execute(f"SELECT thread, closed, username, can_create FROM users WHERE id = ({VALIDATE_ACCESS_QUERY}) LIMIT 1", [str(create_on), token])
         thread_id, closed, creator_username, creator_can_create = cursor.fetchone()
         send_notification = True
@@ -363,11 +363,11 @@ def create_new_thread(cursor, name, first_username, token=""):
             set_user_to_account(cursor, result["userhash"], token)
         result.update(send_message(cursor, result["userhash"], CREATE_NEW_CHAT_MESSAGE%(first_username, name), True, token))
     return result
-    
-    
+
+
 def get_message(cursor, message_id):
     cursor.execute("""
-        SELECT 
+        SELECT
             messages.id,
             CASE messages.is_system WHEN 1 THEN "SYSTEM" ELSE users.username END,
             CASE messages.is_system WHEN 1 THEN "__SYSTEM_HASH__" ELSE users.hash END AS hash,
@@ -378,19 +378,19 @@ def get_message(cursor, message_id):
             messages
         LEFT JOIN
             users ON (messages.user = users.id)
-        WHERE 
+        WHERE
             messages.id = %s
         LIMIT 1
         """, [AES_KEY, message_id])
     id, username, userhash, timestamp, content, system  = cursor.fetchone()
     return {"id": id, "username": username, "timestamp": timestamp, "content": markdown(content.decode('utf-8')).replace("\n", "<br>"), "system": bool(system)}, userhash
-    
-    
+
+
 def set_user_read(cursor, userhash, token=""):
     cursor.execute(f"UPDATE users SET last_read_time = %s WHERE id = ({VALIDATE_ACCESS_QUERY})", [get_timestamp(), userhash, token])
     return {"status": "ok"}
 
-    
+
 def get_messages(cursor, userhash, offset=0, limit=64, id_bookmark=0, id_direction=0, exclude_list=[], token=""):
     id_direction = int(id_direction)
     id_direction = id_direction if abs(id_direction) == 1 else 0
@@ -402,19 +402,19 @@ def get_messages(cursor, userhash, offset=0, limit=64, id_bookmark=0, id_directi
         SELECT *
         FROM
         (
-            SELECT 
+            SELECT
                 id,
                 sender,
                 me,
-                timestamp,            
+                timestamp,
                 UNCOMPRESS(AES_DECRYPT(content, %s)),
                 is_system
-            FROM 
+            FROM
                 messages_view
             WHERE
                 init_user_id = ({VALIDATE_ACCESS_QUERY})
             AND
-            (            
+            (
                 %s = 0
                 OR
                     (id > %s AND %s = 1)
@@ -458,7 +458,7 @@ def get_threads_with_token(cursor, token):
             users.id
         """, [token])
     return {"status": "ok", "result": [{"thread_name": thread_name, "username": username, "userhash": userhash, "unread": unread, "last_message_timestamp": last_message_timestamp, "last_read_time": last_read_time} for thread_name, username, userhash, unread, last_message_timestamp, last_read_time in cursor]}
-    
+
 
 def activity(cursor, token):
     timestamp = get_timestamp()
@@ -467,10 +467,10 @@ def activity(cursor, token):
     if count > 0:
         def update_tables(cursor):
             sleep(1)
-            cursor.execute("UPDATE tokens SET last_activity_timestamp = %s WHERE hash = %s", [timestamp, token])    
+            cursor.execute("UPDATE tokens SET last_activity_timestamp = %s WHERE hash = %s", [timestamp, token])
             cursor.execute("UPDATE accounts SET last_login_timestamp = %s WHERE id IN (SELECT account FROM valid_tokens WHERE hash = %s)", [timestamp, token])
         Thread(target=cursor_provider(update_tables)).start()
-        
+
     return {"status": "ok", "result": count>0}
 
 
@@ -505,19 +505,19 @@ def login(cursor, login, password, no_activity_lifespan=3600, max_lifespan=60480
         account_id, password_hash, = cursor.fetchone()
     except TypeError as _:
         return {"status": "ok", "result": False}
-    
+
     if not bcrypt.checkpw(str(password).encode('utf-8'), password_hash.encode('utf-8')):
         return {"status": "ok", "result": False}
-    
+
     timestamp = get_timestamp()
     for _ in range(256):
         try:
             token = my_uuid()
             cursor.execute("""
-                INSERT INTO tokens 
+                INSERT INTO tokens
                     (hash, account, created_timestamp, last_activity_timestamp, no_activity_lifespan, max_lifespan)
-                VALUES 
-                    (%s, %s, %s, %s, %s, %s)""", 
+                VALUES
+                    (%s, %s, %s, %s, %s, %s)""",
                 [token, account_id, timestamp, timestamp, 1000*int(no_activity_lifespan), 1000*int(max_lifespan)])
             break
         except mysql.connector.IntegrityError as _:
@@ -539,8 +539,8 @@ def register(cursor, login, password):
         return {"status": "ok"}
     except mysql.connector.errors.IntegrityError:
         return {"status": "error"}
-    
-    
+
+
 def delete_account(cursor, token=""):
     cursor.execute("SELECT account FROM valid_tokens WHERE hash = %s LIMIT 1", [token])
     account_id, = cursor.fetchone()
@@ -560,30 +560,30 @@ def push_subscribe(cursor, userhash, token="", subscription_information=dict()):
             (user, subscription_information, vapid_private_key, last_derivered_message_timestamp, hash)
             VALUES
             (%s, AES_ENCRYPT(%s, %s), AES_ENCRYPT(%s, %s), %s, %s)
-        """, [user_id, json.dumps(subscription_information).encode('utf-8'), AES_KEY, VAPID_PRIVATE_KEY.encode('utf-8'), AES_KEY, get_timestamp(), hash]) 
+        """, [user_id, json.dumps(subscription_information).encode('utf-8'), AES_KEY, VAPID_PRIVATE_KEY.encode('utf-8'), AES_KEY, get_timestamp(), hash])
     return {"status": "ok", "hash": hash}
-    
-    
+
+
 def push_unsubscribe(cursor, userhash, token="", subscription_hash=""):
     user_id = VALIDATE_ACCESS(cursor, userhash, token)
     cursor.execute("DELETE FROM push_notifications WHERE user = %s AND (%s = '' OR hash = %s)", [user_id, subscription_hash, subscription_hash])
     return {"status": "ok"}
 
-    
+
 def push_get_by_thread(cursor, thread_id):
     cursor.execute("""
         SELECT
-            pn.id, 
+            pn.id,
             users.id,
             users.hash,
             threads.id,
-            AES_DECRYPT(pn.subscription_information, %s), 
+            AES_DECRYPT(pn.subscription_information, %s),
             AES_DECRYPT(pn.vapid_private_key, %s)
-        FROM 
+        FROM
             push_notifications AS pn
         JOIN
             users ON (pn.user = users.id)
-        JOIN 
+        JOIN
             threads ON (threads.id = users.thread)
         WHERE
             threads.id = %s
