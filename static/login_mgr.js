@@ -15,6 +15,8 @@ const ensureAccessIsValid = async function() {
     let result = await response.json();
     if (result['status'] != "ok" || (!result['result'])) {
         await translatorPromise;
+        if (result["redirect"] !== undefined)
+            window.location = window.location.origin + result["redirect"];
         alert(translate('Acces data is invalid'));
         window.location = window.location.origin;
     }
@@ -36,6 +38,8 @@ const checkToken = async function() {
     let result = await response.json();
     if (result['status'] != "ok" || result['result'] == false) {
         localStorage.token = "";
+        if (result["redirect"] !== undefined)
+            window.location = window.location.origin + result["redirect"];
         alert(translate("Logged out"));
         window.location = window.location.origin;
     }

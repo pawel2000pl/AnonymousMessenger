@@ -49,6 +49,8 @@ createNewChatBtn.addEventListener('click', async ()=>{
     });
     response = await response.json();
     if (response.status != "ok") {
+        if (response["redirect"] !== undefined)
+            window.location = window.location.origin + result["redirect"];
         alert(translate("Error occured"));
         return;
     }
@@ -78,6 +80,8 @@ joinChatBtn.addEventListener('click', async ()=>{
     });
     let result = await response.json();
     if (result['status'] != "ok" || (!result['result'])) {
+        if (result["redirect"] !== undefined)
+            window.location = window.location.origin + result["redirect"];
         alert(translate('Acces data is invalid'));
         return;
     }
@@ -116,6 +120,8 @@ loginBtn.addEventListener('click', async ()=>{
     });
     let result = await response.json();
     if (result['status'] != "ok" || (!result['result'])) {
+        if (result["redirect"] !== undefined)
+            window.location = window.location.origin + result["redirect"];
         alert(translate('Invalid user and / or password'));
         return;
     }
@@ -140,6 +146,8 @@ changePasswordBtn.addEventListener('click', async ()=>{
     });
     let result = await response.json();
     if (result['status'] != "ok") {
+        if (result["redirect"] !== undefined)
+            window.location = window.location.origin + result["redirect"];
         alert(translate('Cannot change the password (check old password)'));
         return;
     }
@@ -161,6 +169,8 @@ deleteAccountdBtn.addEventListener('click', async ()=>{
     });
     let result = await response.json();
     if (result['status'] != "ok") {
+        if (result["redirect"] !== undefined)
+            window.location = window.location.origin + result["redirect"];
         alert(translate('Error occured'));
         return;
     }
@@ -181,6 +191,8 @@ registerBtn.addEventListener('click', async ()=>{
     });
     let result = await response.json();
     if (result['status'] != "ok") {
+        if (result["redirect"] !== undefined)
+            window.location = window.location.origin + result["redirect"];
         alert(translate('Cannot create the user - try another username'));
         return;
     }

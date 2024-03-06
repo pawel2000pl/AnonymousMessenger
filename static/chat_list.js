@@ -14,6 +14,8 @@ const updateChatList = async function() {
     });
     let result = await response.json();
     if (result["status"] != "ok") {
+        if (result["redirect"] !== undefined)
+            window.location = window.location.origin + result["redirect"];
         alert(translate("Cannot download list of chats"));
         return;
     }

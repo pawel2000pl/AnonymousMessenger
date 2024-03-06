@@ -3,6 +3,7 @@ import json
 import cherrypy
 import messenger
 import traceback
+import mysql.connector
 
 from tasks import Task
 from functools import wraps
@@ -13,6 +14,7 @@ from web_socket_module import ChatWebSocketHandler, NotifyWebSocketHandler, prop
 MY_PATH = os.path.dirname(os.path.abspath(__file__)) + "/"
 STATIC_PATH = MY_PATH + '../static/'
 ERROR_RESPONSE = json.dumps({"status": "error"}).encode("utf-8")
+ERROR_DATABASE_RESPONSE = json.dumps({"status": "error", "redirect": "/db_error.html"}).encode("utf-8")
 TRNASLATES = json.loads(open(STATIC_PATH+"translates.json").read())
 LANGUAGES_LIST = list(TRNASLATES.keys())
 
@@ -72,7 +74,9 @@ def unpackCherryPyJson(fun):
             return json.dumps(fun(*args, **kwargs)).encode("utf-8")
         except Exception as err:
             log_error(err)
-            cherrypy.log(err)
+            cherrypy.log(repr(err))
+            if isinstance(err, mysql.connector.errors.DatabaseError):
+                return ERROR_DATABASE_RESPONSE
             return ERROR_RESPONSE
         except:
             log_error(traceback.format_exc())
@@ -80,6 +84,7 @@ def unpackCherryPyJson(fun):
             return ERROR_RESPONSE
 
     return decorator
+
 
 def decorator_pack(fun):
 

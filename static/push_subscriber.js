@@ -52,6 +52,12 @@ async function subscribeOnServer(subscribtion) {
         }),
     });
     const data = await response.json();
+    if (data['status'] != 'ok') {
+        if (result["redirect"] !== undefined)
+            window.location = window.location.origin + result["redirect"];
+        alert(translate('Error occured'));
+        return;
+    }
     localStorage['push_messages_notification'] = data['hash'];
 }
 
@@ -59,7 +65,7 @@ async function subscribeOnServer(subscribtion) {
 async function unsubscribeThis() {
     if (!localStorage['push_messages_notification'])
         return;
-    await fetch('/query/push_unsubscribe', {
+    const response = await fetch('/query/push_unsubscribe', {
         method: "post",
         headers: {
             "Content-Type": "application/json"
@@ -70,11 +76,18 @@ async function unsubscribeThis() {
             subscription_hash: localStorage['push_messages_notification']
         }),
     });
+    const data = await response.json();
+    if (data['status'] != 'ok') {
+        if (result["redirect"] !== undefined)
+            window.location = window.location.origin + result["redirect"];
+        alert(translate('Error occured'));
+        return;
+    }
 }
 
 
 async function unsubscribeAll() {
-    await fetch('/query/push_unsubscribe', {
+    const response = await fetch('/query/push_unsubscribe', {
         method: "post",
         headers: {
             "Content-Type": "application/json"
@@ -84,6 +97,13 @@ async function unsubscribeAll() {
             token: localStorage.token??""
         }),
     });
+    const data = await response.json();
+    if (data['status'] != 'ok') {
+        if (result["redirect"] !== undefined)
+            window.location = window.location.origin + result["redirect"];
+        alert(translate('Error occured'));
+        return;
+    }
 }
 
 

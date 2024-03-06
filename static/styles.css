@@ -339,3 +339,15 @@ hr {
 .language-selector div:hover {
     background-color: rgb(26, 26, 26);
 }
+
+
+.db-error {
+    padding: 5%;
+    width: 90%;
+    text-align: center;
+}
+
+
+.db-error img {
+    width: 10%;
+}

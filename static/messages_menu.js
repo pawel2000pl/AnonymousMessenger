@@ -25,8 +25,11 @@ newUserBtn.addEventListener('click', async ()=>{
     if (result['status'] == "ok") {
         newUserOutput.value = result['userhash'];
         newUserOutputHref.value = window.location.origin + "/messages.html?userhash="+result['userhash'];
-    } else
+    } else {
+        if (result["redirect"] !== undefined)
+            window.location = window.location.origin + result["redirect"];
         alert(translate('Cannot generate the new user'));
+    }
 });
 
 const checkCanCreate = async function() {
@@ -43,6 +46,8 @@ const checkCanCreate = async function() {
     let result = await response.json();
     if (result['status'] == "ok" && result['result'])
         return;
+    if (result["redirect"] !== undefined)
+        window.location = window.location.origin + result["redirect"];
     generateNewUserDiv.style.display = "none";
 };
 checkCanCreate();
@@ -61,8 +66,11 @@ changeUserhashBtn.addEventListener('click', async ()=>{
     let result = await response.json();
     if (result['status'] == "ok") {
         window.location = window.location.origin + "/messages.html?userhash="+result['userhash'];
-    } else
+    } else {
+        if (result["redirect"] !== undefined)
+            window.location = window.location.origin + result["redirect"];
         alert(translate('Cannot generate the new user'));
+    }
 });
 
 closeUserBtn.addEventListener('click', async ()=>{
@@ -81,6 +89,9 @@ closeUserBtn.addEventListener('click', async ()=>{
     let result = await response.json();
     if (result['status'] == "ok") {
         window.location = window.location.origin;
-    } else
+    } else {
+        if (result["redirect"] !== undefined)
+            window.location = window.location.origin + result["redirect"];
         alert(translate('Cannot remove the user'));
+    }
 });

@@ -19,7 +19,7 @@ DELETE_THREAD_TIME = 1000 * 3600 * 24 * 365
 DELETE_ACCOUNT_TIME = 1000 * 3600 * 24 * 365 * 3
 ACTIVATE_ACCOUNT_TIME = 1000 * 60 * 5
 UNSUBSCRIBE_TIMEOUT = 1000 * 3600 * 24 * 365
-MAX_SUBSCIPTIONS_PER_USER = 32
+MAX_SUBSCRIPTIONS_PER_USER = 32
 
 CHANGES_USERNAME_MESSSAGE = "User *%s* has changed its nick to *%s*"
 CLOSE_USERNAME_MESSSAGE = "User *%s* has left from the chat"
@@ -30,7 +30,7 @@ DATABASE_HOST = os.getenv("DATABASE_HOST")
 DATABASE_NAME = os.getenv("DATABASE_NAME")
 DATABASE_USER = os.getenv("DATABASE_USER")
 DATABASE_PASS = os.getenv("DATABASE_PASS")
-DATABASE_POTR = os.getenv("DATABASE_PORT", "3306")
+DATABASE_PORT = os.getenv("DATABASE_PORT", "3306")
 AES_KEY = os.getenv("AES_KEY", "4ea040749715201f3fb0352b41eea15e5ad969508701eb25401770ff0cefaa97")
 RANDOM_DEVICE = os.getenv("RANDOM_DEVICE", "/dev/random")
 VAPID_CLAIMS =  {"sub": "mailto:"+os.getenv("mail", "your.email@example.com")}
@@ -53,7 +53,7 @@ def get_database_connection():
         user = DATABASE_USER,
         password = DATABASE_PASS,
         database = DATABASE_NAME,
-        port = DATABASE_POTR)
+        port = DATABASE_PORT)
 
 
 HASH_VALID_CHARS = set("qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890-_+=")
@@ -250,7 +250,7 @@ def delete_old_push_notificaions(cursor):
                 ORDER BY
                     pn.last_derivered_message_timestamp
                 LIMIT 1
-                OFFSET {MAX_SUBSCIPTIONS_PER_USER}
+                OFFSET {MAX_SUBSCRIPTIONS_PER_USER}
             )
         """)
     cursor.execute("DELETE FROM push_notifications WHERE id IN (SELECT id FROM pn_to_delete)")
@@ -456,6 +456,8 @@ def get_threads_with_token(cursor, token):
             tokens.hash = %s
         GROUP BY
             users.id
+        ORDER BY
+            last_message_timestamp DESC
         """, [token])
     return {"status": "ok", "result": [{"thread_name": thread_name, "username": username, "userhash": userhash, "unread": unread, "last_message_timestamp": last_message_timestamp, "last_read_time": last_read_time} for thread_name, username, userhash, unread, last_message_timestamp, last_read_time in cursor]}
 
