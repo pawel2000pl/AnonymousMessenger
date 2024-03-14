@@ -1,19 +1,21 @@
+import json
 import cherrypy
 import messenger
-import json
 
-from messenger_logs import log_statistic, log_error
+from time import time
+from threading import Thread
+from pywebpush import webpush
 from collections import defaultdict
 from ws4py.websocket import WebSocket
 from ws4py.messaging import TextMessage
-from threading import Thread
-from time import time
-from pywebpush import webpush
+from messenger_logs import log_statistic, log_error
+
 
 SUBSCRIBTIONS = defaultdict(set)
 NOTIFY_SUBSCRIBTION = defaultdict(set)
 NOTIFY_SUBSCRIBTION_READED = defaultdict(set)
 MAX_CONNECTION_TIME = 7200
+
 
 @log_statistic
 def propagate_message(cursor, thread_id, message_id):
@@ -50,6 +52,14 @@ def propagate_message(cursor, thread_id, message_id):
         except Exception as e:
             print(e)
             pass
+        
+        
+
+propagate_message_with_cursor = messenger.cursor_provider(propagate_message)
+
+
+def propagate_message_async(thread_id, message_id):
+    Thread(lambda tid=thread_id, mid=message_id: propagate_message_with_cursor(tid, mid)).start()
 
 
 @log_statistic

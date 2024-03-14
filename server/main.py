@@ -9,7 +9,8 @@ from tasks import Task
 from functools import wraps
 from messenger_logs import log_error, log_statistic, save_logs
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
-from web_socket_module import ChatWebSocketHandler, NotifyWebSocketHandler, propagate_message, clean_old_connections
+from web_socket_module import ChatWebSocketHandler, NotifyWebSocketHandler, propagate_message_async, clean_old_connections
+
 
 MY_PATH = os.path.dirname(os.path.abspath(__file__)) + "/"
 STATIC_PATH = MY_PATH + '../static/'
@@ -98,8 +99,8 @@ def decorator_pack(fun):
 
     return decorator
 
-class Server:
 
+class Server:
 
     @cherrypy.expose()
     @unpackCherryPyJson
@@ -123,6 +124,12 @@ class Server:
         return {"Hello": "World"}
 
 
+    @cherrypy.expose()
+    @unpackCherryPyJson
+    def push_public(self, *args, **kwargs):
+        return messenger.VAPID_PUBLIC_KEY
+    
+
     @decorator_pack
     def is_access_valid(self, cursor, userhash, token=""):
         return messenger.is_access_valid(cursor, userhash, token=token)
@@ -142,7 +149,9 @@ class Server:
     def send_message(self, cursor, userhash, content, token=""):
         result = messenger.send_message(cursor, userhash, content, token=token)
         if result['status'] == 'ok':
-            propagate_message(cursor, messenger.get_thread_id(cursor, userhash, token), result['message_id'])
+            thread_id = messenger.get_thread_id(cursor, userhash, token)
+            message_id = result['message_id']
+            propagate_message_async(thread_id, message_id)
         return result
 
 
@@ -156,7 +165,7 @@ class Server:
         thread_id = messenger.get_thread_id(cursor, userhash, token)
         result = messenger.close_user(cursor, userhash, token)
         if result['status'] == 'ok' and messenger.thread_exists(cursor, thread_id):
-            propagate_message(cursor, thread_id, result['message_id'])
+            propagate_message_async(thread_id, result['message_id'])
         return result
 
 
@@ -174,7 +183,7 @@ class Server:
     def add_user(self, cursor, creator, username, can_create=True, token=""):
         result = messenger.add_user(cursor, str(creator), username, can_create, token)
         if result['status'] == 'ok':
-            propagate_message(cursor, messenger.get_thread_id(cursor, creator, token), result['message_id'])
+            propagate_message_async(messenger.get_thread_id(cursor, creator, token), result['message_id'])
         return result
 
 
@@ -226,11 +235,6 @@ class Server:
     @decorator_pack
     def push_unsubscribe(self, cursor, userhash, token="", subscription_hash=""):
         return messenger.push_unsubscribe(cursor, userhash, token, subscription_hash)
-
-
-    @decorator_pack
-    def push_public(self, *args, **kwargs):
-        return messenger.VAPID_PUBLIC_KEY
 
 
 class Root:

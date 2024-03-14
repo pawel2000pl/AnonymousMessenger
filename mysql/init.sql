@@ -129,8 +129,8 @@ CREATE INDEX errors_timestamp ON errors(timestamp);
 CREATE VIEW short_errors AS
     SELECT 
         readable_timestamp, 
-        LEFT(message, IFNULL(NULLIF(LOCATE("\n", message), 0), 64)-1)
-    FROM 
+        LEFT(message, IFNULL(NULLIF(LOCATE("\n", message), 0), 64)-1) AS short_message
+    FROM
         errors
     ORDER BY
         timestamp;

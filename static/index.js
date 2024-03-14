@@ -54,7 +54,9 @@ createNewChatBtn.addEventListener('click', async ()=>{
         alert(translate("Error occured"));
         return;
     }
-    window.location.href = window.location.origin + "/messages.html?userhash="+response.userhash;
+    let params = new URLSearchParams();
+    params.append('userhash', response.userhash);
+    window.location.href = window.location.origin + "/messages.html?"+params.toString();
 });
 
 

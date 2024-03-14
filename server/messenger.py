@@ -10,6 +10,7 @@ from time import sleep
 from random import random
 from hashlib import sha256
 from functools import wraps
+from base64 import b85encode
 from threading import Thread
 from markdown import markdown
 
@@ -35,6 +36,7 @@ AES_KEY = os.getenv("AES_KEY", "4ea040749715201f3fb0352b41eea15e5ad969508701eb25
 RANDOM_DEVICE = os.getenv("RANDOM_DEVICE", "/dev/random")
 VAPID_CLAIMS =  {"sub": "mailto:"+os.getenv("mail", "your.email@example.com")}
 
+
 def generate_vapid_keypair():
     pk = ecdsa.SigningKey.generate(curve=ecdsa.NIST256p)
     vk = pk.get_verifying_key()
@@ -43,9 +45,11 @@ def generate_vapid_keypair():
         'public_key': base64.urlsafe_b64encode(bytearray(b"\x04") + bytearray(vk.to_string())).decode('utf-8').strip("=")
     }
 
+
 VAPID_KEYS = generate_vapid_keypair()
 VAPID_PRIVATE_KEY = VAPID_KEYS['private_key']
 VAPID_PUBLIC_KEY = VAPID_KEYS['public_key']
+
 
 def get_database_connection():
     return mysql.connector.connect(
@@ -56,7 +60,7 @@ def get_database_connection():
         port = DATABASE_PORT)
 
 
-HASH_VALID_CHARS = set("qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890-_+=")
+HASH_VALID_CHARS = set('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~-_+=')
 VALIDATE_ACCESS_QUERY = """
         SELECT
             users.id
@@ -72,19 +76,14 @@ VALIDATE_ACCESS_QUERY = """
             (users.account IS NULL OR account_tokens.hash = %s)
         LIMIT 1
         """
-
-
-def remove_unsafe_chars(test):
-    return str().join(c for c in str(test) if c in HASH_VALID_CHARS)
-
-
-def insert_inline_token_query(userhash, token):
-    return VALIDATE_ACCESS_QUERY%(remove_unsafe_chars(userhash), remove_unsafe_chars(token))
-
+        
 
 def my_uuid():
+    result = str()
     with open(RANDOM_DEVICE, "rb") as f:
-        return sha256(f.read(64*1024)).hexdigest()
+        while len(result) < 64:
+            result += b85encode(sha256(f.read(16*1024)).digest()).decode('utf-8')
+    return result[:64]
 
 
 def random_sleep(_min=0.01, _max=0.1):

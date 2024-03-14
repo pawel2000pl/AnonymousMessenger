@@ -24,7 +24,9 @@ newUserBtn.addEventListener('click', async ()=>{
     let result = await response.json();
     if (result['status'] == "ok") {
         newUserOutput.value = result['userhash'];
-        newUserOutputHref.value = window.location.origin + "/messages.html?userhash="+result['userhash'];
+        let params = new URLSearchParams();
+        params.append('userhash', result['userhash']);
+        newUserOutputHref.value = window.location.origin + "/messages.html?"+params.toString();
     } else {
         if (result["redirect"] !== undefined)
             window.location = window.location.origin + result["redirect"];
@@ -65,7 +67,9 @@ changeUserhashBtn.addEventListener('click', async ()=>{
     });
     let result = await response.json();
     if (result['status'] == "ok") {
-        window.location = window.location.origin + "/messages.html?userhash="+result['userhash'];
+        let params = new URLSearchParams();
+        params.append('userhash', result['userhash']);
+        window.location = window.location.origin + "/messages.html?"+params.toString();
     } else {
         if (result["redirect"] !== undefined)
             window.location = window.location.origin + result["redirect"];
