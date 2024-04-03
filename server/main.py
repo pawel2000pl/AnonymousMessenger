@@ -261,7 +261,7 @@ if __name__ == "__main__":
     cherrypy.tree.mount(Root(), '/', SERVER_CONFIG)
     cherrypy.tree.mount(Server(), '/query', SERVER_CONFIG)
 
-    MY_IDENT = os.getenv("HOSTNAME", "AH-"+messenger.my_uuid()[:8])
+    MY_IDENT = os.getenv("HOSTNAME", "AH-"+messenger.my_uuid(False)[:8])
 
     log_error("Server started as " + MY_IDENT)
     task = Task(cherrypy.engine, save_logs, period=30, init_delay=10, repeat_on_close=True, before_close=lambda: log_error("Server "+MY_IDENT+" stopped"))

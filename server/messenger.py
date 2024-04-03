@@ -10,7 +10,7 @@ from time import sleep
 from random import random
 from hashlib import sha256
 from functools import wraps
-from base64 import b85encode
+from base64 import b64encode, b85encode
 from threading import Thread
 from markdown import markdown
 
@@ -78,11 +78,12 @@ VALIDATE_ACCESS_QUERY = """
         """
         
 
-def my_uuid():
+def my_uuid(use_b85=True):
+    hash_fun = b85encode if use_b85 else b64encode
     result = str()
     with open(RANDOM_DEVICE, "rb") as f:
         while len(result) < 64:
-            result += b85encode(sha256(f.read(16*1024)).digest()).decode('utf-8')
+            result += hash_fun(sha256(f.read(16*1024)).digest()).decode('utf-8')
     return result[:64]
 
 
