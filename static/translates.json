@@ -2,6 +2,7 @@
     "en": {
         "Acces data is invalid": "Acces data is invalid",
         "Account ID": "Account ID",
+        "Add push notifications for messages to this chat, or remove all notifications": "Add push notifications for messages to this chat, or remove all notifications",
         "Are you sure that you want to delete your account?": "Are you sure that you want to delete your account?",
         "Are you sure that you want to leave this chat?": "Are you sure that you want to leave this chat?",
         "Cannot change the password (check old password)": "Cannot change the password (check old password)",
@@ -61,6 +62,7 @@
     "pl": {
         "Acces data is invalid": "Nieprawid\u0142owy kod dost\u0119pu",
         "Account ID": "Identyfikator konta",
+        "Add push notifications for messages to this chat, or remove all notifications": "Dodaj powiadomienia push dla nowych wiadomo\u015bci w tym czacie lub usu\u0144 wszystkie powiadomienia",
         "Are you sure that you want to delete your account?": "Czy na pewno chcesz usun\u0105\u0107 to konto?",
         "Are you sure that you want to leave this chat?": "Czy na pewno chcesz opu\u015bci\u0107 ten czat?",
         "Cannot change the password (check old password)": "Nie mo\u017cna zmieni\u0107 has\u0142a (sprawd\u017a stare has\u0142o)",
@@ -120,6 +122,7 @@
     "de": {
         "Acces data is invalid": "Ung\u00fcltiger Zugriffscode",
         "Account ID": "Kontonummer",
+        "Add push notifications for messages to this chat, or remove all notifications": "Push-Benachrichtigungen f\u00fcr Nachrichten an diesen Chat hinzuf\u00fcgen oder alle Benachrichtigungen entfernen",
         "Are you sure that you want to delete your account?": "Sind Sie sicher, dass Sie dieses Konto l\u00f6schen m\u00f6chten?",
         "Are you sure that you want to leave this chat?": "Sind Sie sicher, dass Sie diesen Chat verlassen m\u00f6chten?",
         "Cannot change the password (check old password)": "Das Passwort kann nicht ge\u00e4ndert werden (\u00fcberpr\u00fcfen Sie das alte Passwort)",
@@ -179,6 +182,7 @@
     "fr": {
         "Acces data is invalid": "Les donn\u00e9es d'acc\u00e8s sont invalides",
         "Account ID": "Identifiant du compte",
+        "Add push notifications for messages to this chat, or remove all notifications": "Ajoutez des notifications push pour les messages de ce chat ou supprimez toutes les notifications",
         "Are you sure that you want to delete your account?": "\u00cates-vous s\u00fbr de vouloir supprimer ce compte?",
         "Are you sure that you want to leave this chat?": "\u00cates-vous s\u00fbr de vouloir quitter cette discussion ?",
         "Cannot change the password (check old password)": "Impossible de changer le mot de passe (v\u00e9rifiez l'ancien mot de passe)",

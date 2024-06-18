@@ -1,5 +1,5 @@
 :root {
-    --font-size: 1.2vmax;
+    --font-size: 1em;
     /* --font-size: 0.5cm; */
 }
 
@@ -30,9 +30,8 @@ h2 {
     text-align: center;
     text-decoration: none;
     display: inline-block;
-    padding: 3px 10px 3px 10px;
-    margin-left: 2px;
-    margin-right: 2px;
+    padding: 3px 10px 3px 10px;  
+    margin: 1px 2px 1px 2px;
     cursor: pointer;
     border-radius: 6px;
     transition-duration: 0.2s;
@@ -154,7 +153,7 @@ hr {
     overflow: hidden;
     display: block;
 
-    margin-top: calc(-3 * var(--font-size));
+    margin-top: calc(-2 * var(--font-size));
     margin-right: calc(1 * var(--font-size));
     z-index: 1;
 

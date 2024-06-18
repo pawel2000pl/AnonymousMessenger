@@ -2,7 +2,10 @@
 
 if [ -e "$APP_PATH/.env" ];
 then
-    source "$APP_PATH/.env"
+    TEMP_ENV="/dev/shm/.am-env-tmp"
+    sed -E 's/^(.+)/export \1/g' "$APP_PATH/.env" > "$TEMP_ENV"
+    source "$TEMP_ENV"
+    rm -f "$TEMP_ENV"
 fi
 
 if [ "$TRANSIENT_DATABASE" == "TRUE" ];
