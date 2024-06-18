@@ -46,4 +46,4 @@ const checkToken = async function() {
 };
 
 var permissionChecks = checkToken(false);
-setInterval(checkToken, 60000);
+setInterval(checkToken, 90000);

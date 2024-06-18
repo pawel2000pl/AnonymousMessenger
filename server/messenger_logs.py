@@ -5,7 +5,7 @@ from time import time
 from functools import wraps
 
 
-MAX_ERROR_LIFETIME = 1000 * 3600 * 24 * 30
+MAX_ERROR_LIFETIME = messenger.get_int_env('MAX_ERROR_LIFETIME', 1000 * 3600 * 24 * 30)
 
 DB_COMMANDS = []
 

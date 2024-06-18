@@ -50,9 +50,7 @@ def propagate_message(cursor, thread_id, message_id):
             )
             messenger.push_update_success(cursor, dest['pn_id'])
         except Exception as e:
-            print(e)
-            pass
-        
+            log_error(e)        
         
 
 propagate_message_with_cursor = messenger.cursor_provider(propagate_message)

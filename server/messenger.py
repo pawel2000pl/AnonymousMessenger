@@ -10,10 +10,9 @@ from time import sleep
 from random import random
 from hashlib import sha256
 from functools import wraps
-from base64 import b64encode
-from base64 import b85encode
 from threading import Thread
 from markdown import markdown
+from base64 import b64encode, b85encode
 
 
 def get_int_env(name, default):
@@ -184,12 +183,12 @@ def send_message(cursor, userhash, content, system_message=False, token=""):
     return {"status": "ok", "message_id": cursor.lastrowid}
 
 
-def change_username(cursor, userhash, new_username, send_message=True, token=""):
+def change_username(cursor, userhash, new_username, send_notification=True, token=""):
     if new_username is None or len(new_username) == 0 or len(new_username) > MAX_USERNAME_LENGTH:
         new_username = "User-%d"%round(100000*random())
     user_id = VALIDATE_ACCESS(cursor, userhash, token)
     execute = lambda: cursor.execute("UPDATE users SET username = %s WHERE id = %s", [new_username, user_id])
-    if send_message:
+    if send_notification:
         cursor.execute("SELECT username FROM users WHERE id = %s LIMIT 1", [user_id])
         old_username, = cursor.fetchone()
         execute()
@@ -223,7 +222,6 @@ def remove_unused_threads(cursor):
     cursor.execute("DELETE FROM messages WHERE user IN (SELECT users.id FROM users JOIN deleting_threads ON (users.thread = deleting_threads.id))")
     cursor.execute("DELETE FROM push_notifications WHERE user IN (SELECT users.id FROM deleting_threads JOIN users ON (users.thread = deleting_threads.id))")
     cursor.execute("DELETE FROM users WHERE thread IN (SELECT id FROM deleting_threads)")
-    cursor.execute("DELETE FROM threads WHERE id IN (SELECT id FROM deleting_threads)")
     cursor.execute("DELETE FROM threads WHERE id IN (SELECT id FROM deleting_threads)")
     cursor.execute("DELETE FROM deleting_threads")
 
@@ -261,6 +259,8 @@ def delete_old_push_notificaions(cursor):
                 LIMIT 1
                 OFFSET {MAX_SUBSCRIPTIONS_PER_USER}
             )
+        OR
+            last_derivered_message_timestamp < UNIX_TIMESTAMP() * 1000 - {UNSUBSCRIBE_TIMEOUT}
         """)
     cursor.execute("DELETE FROM push_notifications WHERE id IN (SELECT id FROM pn_to_delete)")
     cursor.execute("DELETE FROM pn_to_delete")
@@ -477,7 +477,6 @@ def activity(cursor, token):
     count, = cursor.fetchone()
     if count > 0:
         def update_tables(cursor):
-            sleep(1)
             cursor.execute("UPDATE tokens SET last_activity_timestamp = %s WHERE hash = %s", [timestamp, token])
             cursor.execute("UPDATE accounts SET last_login_timestamp = %s WHERE id IN (SELECT account FROM valid_tokens WHERE hash = %s)", [timestamp, token])
         Thread(target=cursor_provider(update_tables)).start()
