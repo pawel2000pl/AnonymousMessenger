@@ -10,17 +10,26 @@ from time import sleep
 from random import random
 from hashlib import sha256
 from functools import wraps
-from base64 import b64encode, b85encode
+from base64 import b64encode
+from base64 import b85encode
 from threading import Thread
 from markdown import markdown
 
+
+def get_int_env(name, default):
+    try:
+        return int(os.getenv(name, default))
+    except ValueError:
+        return default
+
+
 MAX_MESSAGE_LENGTH = 262143
 MAX_USERNAME_LENGTH = 255
-DELETE_THREAD_TIME = 1000 * 3600 * 24 * 365
-DELETE_ACCOUNT_TIME = 1000 * 3600 * 24 * 365 * 3
-ACTIVATE_ACCOUNT_TIME = 1000 * 60 * 5
-UNSUBSCRIBE_TIMEOUT = 1000 * 3600 * 24 * 365
-MAX_SUBSCRIPTIONS_PER_USER = 32
+DELETE_THREAD_TIME = get_int_env('DELETE_THREAD_TIME', 1000 * 3600 * 24 * 365)
+DELETE_ACCOUNT_TIME = get_int_env('DELETE_ACCOUNT_TIME', 1000 * 3600 * 24 * 365 * 3)
+ACTIVATE_ACCOUNT_TIME = get_int_env('ACTIVATE_ACCOUNT_TIME', 1000 * 60 * 5)
+UNSUBSCRIBE_TIMEOUT = get_int_env('UNSUBSCRIBE_TIMEOUT', 1000 * 3600 * 24 * 365)
+MAX_SUBSCRIPTIONS_PER_USER = get_int_env('MAX_SUBSCRIPTIONS_PER_USER', 32)
 
 CHANGES_USERNAME_MESSSAGE = "User *%s* has changed its nick to *%s*"
 CLOSE_USERNAME_MESSSAGE = "User *%s* has left from the chat"

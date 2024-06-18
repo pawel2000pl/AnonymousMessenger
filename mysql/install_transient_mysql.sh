@@ -3,21 +3,17 @@
 if [ "$TRANSIENT_DATABASE" == "TRUE" ];
 then
     cd /tmp
-    apt install -y wget
     apt update
     apt install -y mariadb-server
 
+    echo "" >> "/etc/mysql/mariadb.cnf"
+    echo "[mariadb]" >> "/etc/mysql/mariadb.cnf"
+    echo "innodb_flush_log_at_trx_commit=0" >> "/etc/mysql/mariadb.cnf"
+
     cd "$APP_PATH"
-
-    echo "" >> "/etc/mysql/mysql.conf.d/mysqld.cnf"
-    echo "innodb_flush_log_at_trx_commit=0" >> "/etc/mysql/mysql.conf.d/mysqld.cnf"
-    echo "innodb_flush_log_at_timeout=3" >> "/etc/mysql/mysql.conf.d/mysqld.cnf"
-
-    /usr/bin/mysqld_safe --user=mysql &
-    sleep 1s
-    while [ `(cat mysql/init.sql | mysql &> /tmp/logs.txt) && echo 1 || echo 0` == 0 ]; do echo "Waiting..."; cat /tmp/logs.txt; sleep 1s; done;
-    killall mysqld
-
-    rm -f /tmp/mysql-apt-config_0.8.22-1_all.deb
-    rm -f /tmp/logs.txt
+    
+    service mariadb start
+    cat mysql/init.sql | mysql &> /tmp/logs.txt
+    cat /tmp/logs.txt
+    service mariadb stop
 fi
