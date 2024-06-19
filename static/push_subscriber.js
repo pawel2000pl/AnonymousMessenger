@@ -1,3 +1,5 @@
+"use strict";
+
 const subscribeBtn = document.getElementById('subscribe-pn-btn');
 const unsubscribeBtn = document.getElementById('unsubscribe-pn-btn');
 const unsubscribeAllBtn = document.getElementById('unsubscribe-all-pn-btn');

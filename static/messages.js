@@ -1,3 +1,5 @@
+"use strict";
+
 const MESSAGE_SYNC_INTERVAL = 2500;
 
 const messageEditor = document.getElementById('message-editor');

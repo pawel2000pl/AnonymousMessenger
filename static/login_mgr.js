@@ -1,3 +1,5 @@
+"use strict";
+
 const urlParams = new URLSearchParams(window.location.search);
 const userhash = urlParams.get('userhash');
 

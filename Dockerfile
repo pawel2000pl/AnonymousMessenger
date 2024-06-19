@@ -20,9 +20,8 @@ COPY mysql "$APP_PATH/mysql"
 RUN bash mysql/install_transient_mysql.sh
 
 COPY . "$APP_PATH/"
-RUN find "$APP_PATH/static" -name "*.html" -exec python3 "$APP_PATH/static_minifier.py" {} \;
-RUN find "$APP_PATH/static" -name "*.css" -exec python3 "$APP_PATH/static_minifier.py" {} \;
-RUN find "$APP_PATH/static" -name "*.js" -exec python3 "$APP_PATH/static_minifier.py" {} \;
+RUN find "$APP_PATH/static" \( -name "*.html" -or -name "*.css" -or -name "*.js" \) -exec \
+    sed -i -r 's/[\r]+/\n/g;s/[\n]+/\n/g;s/[\t ]+$//g;s/^[\t ]+//g;s/[\t ]{2,}/ /g' {} \;
 
 EXPOSE 8080
 CMD bash start.sh

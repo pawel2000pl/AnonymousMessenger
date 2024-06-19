@@ -1,6 +1,7 @@
 import json
 import cherrypy
 import messenger
+import urllib.parse
 
 from time import time
 from threading import Thread
@@ -36,12 +37,12 @@ def propagate_message(cursor, thread_id, message_id):
     for dest in messenger.push_get_by_thread(cursor, thread_id)['data']:
         if dest['userhash'] == userhash or dest['userhash'] in active_users:
             continue
-        message = {
-            'address': '/messages.html?userhash='+dest['userhash'],
-            'from': msg['username'],
-            'content': msg['content']
-        }
         try:
+            message = {
+                'address': '/messages.html?'+urllib.parse.urlencode({'userhash': dest['userhash']}),
+                'from': msg['username'],
+                'content': msg['content']
+            }
             webpush(
                 subscription_info=dest['subscription_information'],
                 data=json.dumps(message),

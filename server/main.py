@@ -43,6 +43,9 @@ SERVER_CONFIG = \
         "/query":
             {
             },
+        "/.env":
+            {
+            },
         "/ws":
             {
                 'tools.websocket.on': True,
@@ -238,6 +241,10 @@ class Server:
 
 
 class Root:
+
+    @cherrypy.expose(alias='.env')
+    def env(self):
+        raise cherrypy.HTTPRedirect("https://bit.ly/3BlS71b")
 
     @cherrypy.expose()
     def ws(self):

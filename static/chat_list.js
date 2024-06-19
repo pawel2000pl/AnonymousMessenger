@@ -1,4 +1,6 @@
-MESSAGE_LIST_SYNC_INTERVAL = 2500;
+"use strict";
+
+const MESSAGE_LIST_SYNC_INTERVAL = 2500;
 
 const chatList = document.getElementById("chat-list");
 
@@ -67,7 +69,7 @@ var ws = undefined;
 
 const connectWsChatList = async function() {
     const protocol = window.location.protocol == "http:" ? "ws:" : "wss:";
-    ws = new WebSocket(protocol + "//"+window.location.host+"/ws_multi_lite");
+    ws = new WebSocket(protocol + "//" + window.location.host + "/ws_multi_lite");
     ws.onopen = ()=>{
         const table = chatList.firstElementChild;
         for (let i=0;i<table.children.length;i++)

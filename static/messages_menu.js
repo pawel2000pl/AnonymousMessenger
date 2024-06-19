@@ -1,3 +1,4 @@
+"use strict";
 
 const newUserBtn = document.getElementById('new-user-btn');
 const newUserName = document.getElementById('new-user-name');

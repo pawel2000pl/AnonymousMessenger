@@ -1,3 +1,4 @@
+"use strict";
 
 const createNewChatBtn = document.getElementById('create-new-chat-btn');
 const chatNameInput = document.getElementById('chat-name-input');
