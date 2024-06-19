@@ -338,6 +338,7 @@ def set_user_to_account(cursor, userhash, token):
 def add_user(cursor, create_on, username: str = None, can_create=True, token=""):
     send_notification = False
     creator_username = ""
+    thread_id = -1
     if isinstance(create_on, int):
         thread_id = create_on
     else:
@@ -348,6 +349,10 @@ def add_user(cursor, create_on, username: str = None, can_create=True, token="")
             return {"status": "error", "message": "User is closed"}
         if not creator_can_create:
             return {"status": "error", "message": "User cannot create a new user"}
+    cursor.execute("SELECT COUNT(*) FROM users WHERE thread = %s AND username = %s", [thread_id, username])
+    count, = cursor.fetchone()
+    if count > 0:
+        return {"status": "error", "message": "User already exists"}
     for i in range(256):
         try:
             userhash = my_uuid()
@@ -355,7 +360,7 @@ def add_user(cursor, create_on, username: str = None, can_create=True, token="")
             break
         except mysql.connector.IntegrityError as _:
             pass
-    if i == 255:
+    else:
         return {"status": "error", "message": "Cannot set the hash"}
     result = {"status": "ok", "userhash": userhash}
     if send_notification:

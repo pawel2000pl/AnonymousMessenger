@@ -31,13 +31,10 @@ const updateChatList = async function() {
         '</tr>';
     table.className = "chat-list-table";
 
-    const createCell = function(link, text) {
+    const createCell = function(text) {
         const td = document.createElement('td');
-        const a = document.createElement('a');
         td.className = 'chat-list-cell';
-        a.textContent = text;
-        a.href = link;
-        td.appendChild(a);
+        td.textContent = text;
         return td;
     };
 
@@ -48,12 +45,18 @@ const updateChatList = async function() {
         const link = window.location.origin + "/messages.html?" + params.toString();
 
         const tr = document.createElement('tr');
+        tr.addEventListener('mouseup', (event)=>{
+            if (event.button==0) 
+                window.location = link;
+            if (event.button==1) 
+                window.open(link, '_blank');
+        });
         tr.userhash = data[i].userhash;
         tr.className = "class-list-row " + (data[i].unread?"class-list-row-unread":"");
-        tr.appendChild(createCell(link, data[i].thread_name));
-        tr.appendChild(createCell(link, data[i].username));
-        tr.appendChild(createCell(link, (new Date(data[i].last_message_timestamp)).toLocaleString()));
-        tr.appendChild(createCell(link, data[i].unread?data[i].unread:" "));
+        tr.appendChild(createCell(data[i].thread_name));
+        tr.appendChild(createCell(data[i].username));
+        tr.appendChild(createCell((new Date(data[i].last_message_timestamp)).toLocaleString()));
+        tr.appendChild(createCell(data[i].unread?data[i].unread:" "));
         table.appendChild(tr);
     }
     chatList.appendChild(table);
@@ -78,14 +81,14 @@ const connectWsChatList = async function() {
             for (let i=0;i<table.children.length;i++)
                 if (table.children[i].userhash == data.userhash) {
                     table.children[i].className = "class-list-row";
-                    table.children[i].lastElementChild.firstElementChild.textContent = "";
+                    table.children[i].lastElementChild.textContent = "";
                     break;
                 }
         if (data.action == "new_message")
             for (let i=0;i<table.children.length;i++)
                 if (table.children[i].userhash == data.userhash) {
                     table.children[i].className = "class-list-row class-list-row-unread";
-                    table.children[i].lastElementChild.firstElementChild.textContent = 1 + Number(table.children[i].lastElementChild.firstElementChild.textContent);
+                    table.children[i].lastElementChild.textContent = 1 + Number(table.children[i].lastElementChild.textContent);
                     break;
                 }
     };
