@@ -9,8 +9,12 @@ from tasks import Task
 from functools import wraps
 from messenger_logs import log_error, log_statistic, save_logs
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
+from audio_streaming import AudioStreamWebSocketHandler, clean_old_audio_connections
 from web_socket_module import ChatWebSocketHandler, NotifyWebSocketHandler, propagate_message_async, clean_old_connections
 
+NO_ACTIVITY_LIFESPAN = messenger.get_int_env('NO_ACTIVITY_LIFESPAN', 7*24*3600)
+MAX_LIFESPAN = messenger.get_int_env('NO_ACTIVITY_LIFESPAN', 604800)
+ALLOW_AUDIO_STREAM = bool(messenger.get_int_env('ALLOW_AUDIO_STREAM', 1))
 
 MY_PATH = os.path.dirname(os.path.abspath(__file__)) + "/"
 STATIC_PATH = MY_PATH + '../static/'
@@ -55,6 +59,11 @@ SERVER_CONFIG = \
             {
                 'tools.websocket.on': True,
                 'tools.websocket.handler_cls': NotifyWebSocketHandler
+            },
+        "/audio":
+            {
+                'tools.websocket.on': ALLOW_AUDIO_STREAM,
+                'tools.websocket.handler_cls': AudioStreamWebSocketHandler
             },
         '/favicon.ico': {
             'tools.staticfile.on': True,
@@ -119,6 +128,12 @@ class Server:
     @unpackCherryPyJson
     def get_translation_keys(self, *args, **kwargs):
         return LANGUAGES_LIST
+
+
+    @cherrypy.expose()
+    @unpackCherryPyJson
+    def allow_audio_stream(self):
+        return {"status": "ok", "result": ALLOW_AUDIO_STREAM}
 
 
     @cherrypy.expose()
@@ -206,7 +221,7 @@ class Server:
 
 
     @decorator_pack
-    def login(self, cursor, login, password, no_activity_lifespan=12*3600, max_lifespan=604800):
+    def login(self, cursor, login, password, no_activity_lifespan=NO_ACTIVITY_LIFESPAN, max_lifespan=MAX_LIFESPAN):
         return messenger.login(cursor, login, password, no_activity_lifespan=no_activity_lifespan, max_lifespan=max_lifespan)
 
 
@@ -240,6 +255,7 @@ class Server:
         return messenger.push_unsubscribe(cursor, userhash, token, subscription_hash)
 
 
+
 class Root:
 
     @cherrypy.expose(alias='.env')
@@ -253,6 +269,11 @@ class Root:
     @cherrypy.expose()
     def ws_multi_lite(self):
         cherrypy.log("Multi handler created: %s" % repr(cherrypy.request.ws_handler))
+
+    @cherrypy.expose()
+    def audio(self):
+        if ALLOW_AUDIO_STREAM:
+            cherrypy.log("Audio handler created: %s" % repr(cherrypy.request.ws_handler))
 
 
 if __name__ == "__main__":
@@ -278,6 +299,8 @@ if __name__ == "__main__":
     task = Task(cherrypy.engine, messenger.cursor_provider(messenger.maintain), period=3600, init_delay=10)
     task.subscribe()
     task = Task(cherrypy.engine, clean_old_connections, period=3600, init_delay=60)
+    task.subscribe()
+    task = Task(cherrypy.engine, clean_old_audio_connections, period=3600, init_delay=60)
     task.subscribe()
 
     cherrypy.engine.start()

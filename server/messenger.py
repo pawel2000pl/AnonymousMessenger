@@ -149,8 +149,8 @@ def get_thread_id(cursor, userhash, token=""):
             users.id = ({VALIDATE_ACCESS_QUERY})
         LIMIT 1
         """, [userhash, token])
-    thread_id, = cursor.fetchone()
-    return thread_id
+    result = cursor.fetchone()
+    return None if result is None else result[0]
 
 
 def thread_exists(cursor, thread_id):

@@ -37,6 +37,7 @@
         "Logged out": "Logged out",
         "Login": "Login",
         "Logout": "Logout",
+        "Mute": "Mute",
         "New messages": "New messages",
         "New password": "New password",
         "No database connection": "No database connection",
@@ -51,13 +52,15 @@
         "Subscribe": "Subscribe",
         "The passwords are not identical": "The passwords are not identical",
         "This option will invalidate the current link to this chat (for this user) and it will generate the new one.": "This option will invalidate the current link to this chat (for this user) and it will generate the new one.",
+        "Unmute": "Unmute",
         "Unread": "Unread",
         "Unsubscribe": "Unsubscribe",
         "Unsubscribe all devices": "Unsubscribe all devices",
         "User can create new users": "User can create new users",
         "User created. Login within 5 minutes to confirm the registration": "User created. Login within 5 minutes to confirm the registration",
         "User hash": "User hash",
-        "Username": "Username"
+        "Username": "Username",
+        "Voice chat": "Voice chat"
     },
     "pl": {
         "Acces data is invalid": "Nieprawid\u0142owy kod dost\u0119pu",
@@ -97,6 +100,7 @@
         "Logged out": "Wylogowano",
         "Login": "Zaloguj si\u0119",
         "Logout": "Wyloguj si\u0119",
+        "Mute": "Wycisz",
         "New messages": "Nowe wiadomo\u015bci",
         "New password": "Nowe has\u0142o",
         "No database connection": "Brak po\u0142\u0105czenia z baz\u0105 danych",
@@ -111,13 +115,15 @@
         "Subscribe": "Subskrybuj",
         "The passwords are not identical": "Has\u0142a nie s\u0105 identyczne",
         "This option will invalidate the current link to this chat (for this user) and it will generate the new one.": "Ta opcja uniewa\u017cni aktualny link do tego czatu (dla tego u\u017cytkownika) i wygeneruje nowy.",
+        "Unmute": "Odcisz",
         "Unread": "Nieprzeczytane",
         "Unsubscribe": "Usu\u0144 subskrypcj\u0119",
         "Unsubscribe all devices": "Usu\u0144 subskrypcj\u0119 na wszyskich uz\u0105dzeniach",
         "User can create new users": "U\u017cytkownik mo\u017ce dodawa\u0107 nowych u\u017cytkownik\u00f3w",
         "User created. Login within 5 minutes to confirm the registration": "U\u017cytkownik utworzony. Zaloguj si\u0119 w ci\u0105gu 5 minut, aby potwierdzi\u0107 rejestracj\u0119",
         "User hash": "Kod dost\u0119pu u\u017cytkownika",
-        "Username": "Nazwa u\u017cytkownika"
+        "Username": "Nazwa u\u017cytkownika",
+        "Voice chat": "Czat g\u0142osowy"
     },
     "de": {
         "Acces data is invalid": "Ung\u00fcltiger Zugriffscode",
@@ -157,6 +163,7 @@
         "Logged out": "Abgemeldet",
         "Login": "Anmelden",
         "Logout": "Ausloggen",
+        "Mute": "stumm",
         "New messages": "Neue Nachrichten",
         "New password": "Neues Kennwort",
         "No database connection": "Keine Datenbankverbindung",
@@ -171,13 +178,15 @@
         "Subscribe": "Abonnieren",
         "The passwords are not identical": "Die Passw\u00f6rter sind nicht identisch",
         "This option will invalidate the current link to this chat (for this user) and it will generate the new one.": "Diese Option macht den aktuellen Link zu diesem Chat ung\u00fcltig (f\u00fcr diesen Benutzer) und generiert einen neuen.",
+        "Unmute": "Stummschaltung aufheben",
         "Unread": "Ungelesen",
         "Unsubscribe": "Abmelden",
         "Unsubscribe all devices": "Auf allen Ger\u00e4ten abmelden",
         "User can create new users": "Benutzer kann neue Benutzer erstellen",
         "User created. Login within 5 minutes to confirm the registration": "Benutzer erstellt. Melden Sie sich innerhalb von 5 Minuten an, um die Registrierung zu best\u00e4tigen",
         "User hash": "Benutzercode",
-        "Username": "Benutzername"
+        "Username": "Benutzername",
+        "Voice chat": "Sprachchat"
     },
     "fr": {
         "Acces data is invalid": "Les donn\u00e9es d'acc\u00e8s sont invalides",
@@ -217,6 +226,7 @@
         "Logged out": "D\u00e9connect\u00e9",
         "Login": "Connexion",
         "Logout": "Se d\u00e9connecter",
+        "Mute": "muet",
         "New messages": "Nouveaux messages",
         "New password": "Nouveau mot de passe",
         "No database connection": "Aucune connexion \u00e0 la base de donn\u00e9es",
@@ -231,12 +241,14 @@
         "Subscribe": "S'abonner",
         "The passwords are not identical": "Les mots de passe ne sont pas identiques",
         "This option will invalidate the current link to this chat (for this user) and it will generate the new one.": "Cette option invalidera le lien actuel vers cette discussion (pour cet utilisateur) et en g\u00e9n\u00e9rera un nouveau.",
+        "Unmute": "r\u00e9activer le son",
         "Unread": "Non lu",
         "Unsubscribe": "Se d\u00e9sinscrire",
         "Unsubscribe all devices": "Se d\u00e9sabonner sur tous les appareils",
         "User can create new users": "L'utilisateur peut cr\u00e9er de nouveaux utilisateurs",
         "User created. Login within 5 minutes to confirm the registration": "Utilisateur cr\u00e9\u00e9. Connectez-vous dans les 5 minutes pour confirmer l'inscription",
         "User hash": "Code d'acc\u00e8s utilisateur",
-        "Username": "Nom d'utilisateur"
+        "Username": "Nom d'utilisateur",
+        "Voice chat": "Chat vocal"
     }
 }

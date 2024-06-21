@@ -8,14 +8,14 @@ from threading import Thread
 from pywebpush import webpush
 from collections import defaultdict
 from ws4py.websocket import WebSocket
-from ws4py.messaging import TextMessage
+from ws4py.messaging import Message, TextMessage
 from messenger_logs import log_statistic, log_error
 
 
 SUBSCRIBTIONS = defaultdict(set)
 NOTIFY_SUBSCRIBTION = defaultdict(set)
 NOTIFY_SUBSCRIBTION_READED = defaultdict(set)
-MAX_CONNECTION_TIME = 7200
+MAX_CONNECTION_TIME = messenger.get_int_env('MAX_CONNECTION_TIME', 7200)
 
 
 @log_statistic
@@ -74,21 +74,24 @@ class ChatWebSocketHandler(WebSocket):
         super().__init__(sock, protocols, extensions, environ, heartbeat_freq)
         self.userhash = ""
         self.token = ""
-        self.thread_id = ""
+        self.thread_id = 0
         self.connectTime = time()
 
 
-    def received_message(self, message: TextMessage):
+    def received_message(self, message: Message):
         try:
             content = json.loads(message.data.decode(message.encoding))
             action = content.get('action', '')
             connection = messenger.get_database_connection()
             cursor = connection.cursor()
 
-            if action == 'subscribe':
+            if action == 'subscribe' and len(self.userhash) == 0:
                 self.userhash = content.get('userhash', '')
                 self.token = content.get('token', '')
                 self.thread_id = messenger.get_thread_id(cursor, self.userhash, self.token)
+                if self.thread_id is None:
+                    self.close()
+                    return
                 SUBSCRIBTIONS[self.thread_id].add(self)
 
             if action == 'message':
@@ -139,7 +142,7 @@ class NotifyWebSocketHandler(WebSocket):
         self.connectTime = time()
 
 
-    def received_message(self, message: TextMessage):
+    def received_message(self, message: Message):
         try:
             content = json.loads(message.data.decode(message.encoding))
             action = content.get('action', '')
@@ -151,6 +154,9 @@ class NotifyWebSocketHandler(WebSocket):
                 self.userhash.append(current_hash)
                 self.token = content.get('token', '')
                 current_thread_id = messenger.get_thread_id(cursor, current_hash, self.token)
+                if current_thread_id is None:
+                    self.close()
+                    return
                 self.thread_id.append(current_thread_id)
                 NOTIFY_SUBSCRIBTION[current_thread_id].add((self, current_hash))
                 NOTIFY_SUBSCRIBTION_READED[current_hash].add(self)

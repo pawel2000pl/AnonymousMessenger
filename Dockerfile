@@ -14,7 +14,7 @@ WORKDIR "$APP_PATH"
 RUN apt update
 RUN apt upgrade -y
 RUN pip install --upgrade pip
-RUN pip install cherrypy ws4py markdown bcrypt mysql-connector-python pywebpush ecdsa
+RUN pip install cherrypy ws4py markdown bcrypt mysql-connector-python pywebpush ecdsa numpy scipy
 
 COPY mysql "$APP_PATH/mysql"
 RUN bash mysql/install_transient_mysql.sh

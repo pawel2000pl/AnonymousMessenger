@@ -13,6 +13,48 @@
             "justMyCode": true,
             "envFile": "${workspaceFolder}/.env",
             "cwd": "${workspaceFolder}",
+        },
+        {
+            "name": "Docker: Python transient",
+            "type": "docker",
+            "request": "launch",
+            "preLaunchTask": "docker-run: transient",
+            "postDebugTask": "docker-run: remove container",
+            "python": {
+                "pathMappings": [
+                    {
+                        "localRoot": "${workspaceFolder}",
+                        "remoteRoot": "/usr/src/AnonymousMessenger/"
+                    }
+                ],
+                "projectType": "general"
+            },
+            "dockerServerReadyAction": {
+                "action": "openExternally",
+                "pattern": "ENGINE Serving on (https?://\\S+|[0-9]+)",
+                "uriFormat": "%s://localhost:%s/about.html"
+            }
+        },
+        {
+            "name": "Docker: Python non-transient",
+            "type": "docker",
+            "request": "launch",
+            "preLaunchTask": "docker-run: non-transient",
+            "postDebugTask": "docker-run: remove container",
+            "python": {
+                "pathMappings": [
+                    {
+                        "localRoot": "${workspaceFolder}",
+                        "remoteRoot": "/usr/src/AnonymousMessenger/"
+                    }
+                ],
+                "projectType": "general"
+            },
+            "dockerServerReadyAction": {
+                "action": "openExternally",
+                "pattern": "ENGINE Serving on (https?://\\S+|[0-9]+)",
+                "uriFormat": "%s://localhost:%s/about.html"
+            }
         }
     ]
 }

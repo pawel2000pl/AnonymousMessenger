@@ -1,3 +1,4 @@
+import cherrypy
 import messenger
 import traceback
 
@@ -14,7 +15,9 @@ def log_error(error):
     if isinstance(error, Exception):
         return log_error(str(error) + "\n\n" + str().join(traceback.TracebackException.from_exception(error).format()))
     global DB_COMMANDS
-    DB_COMMANDS.append(("INSERT INTO errors (timestamp, message) VALUES (%s, %s)", [int(time()*1000), str(error)]))
+    error = str(error)
+    cherrypy.log(error)
+    DB_COMMANDS.append(("INSERT INTO errors (timestamp, message) VALUES (%s, %s)", [int(time()*1000), error]))
 
 
 def log_statistic(fun):
