@@ -18,7 +18,7 @@
             "name": "Docker: Python transient",
             "type": "docker",
             "request": "launch",
-            "preLaunchTask": "docker-run: transient",
+            "preLaunchTask": "docker-run: debug transient",
             "postDebugTask": "docker-run: remove container",
             "python": {
                 "pathMappings": [
@@ -27,19 +27,20 @@
                         "remoteRoot": "/usr/src/AnonymousMessenger/"
                     }
                 ],
-                "projectType": "general"
+                "projectType": "general",
+                "file": "${workspaceFolder}/server/main.py"
             },
             "dockerServerReadyAction": {
                 "action": "openExternally",
                 "pattern": "ENGINE Serving on (https?://\\S+|[0-9]+)",
-                "uriFormat": "%s://localhost:%s/about.html"
+                "uriFormat": "http://localhost:8080/index.html"
             }
         },
         {
-            "name": "Docker: Python non-transient",
+            "name": "Docker: Python",
             "type": "docker",
             "request": "launch",
-            "preLaunchTask": "docker-run: non-transient",
+            "preLaunchTask": "docker-run: debug",
             "postDebugTask": "docker-run: remove container",
             "python": {
                 "pathMappings": [
@@ -48,12 +49,13 @@
                         "remoteRoot": "/usr/src/AnonymousMessenger/"
                     }
                 ],
-                "projectType": "general"
+                "projectType": "general",
+                "file": "${workspaceFolder}/server/main.py"
             },
             "dockerServerReadyAction": {
                 "action": "openExternally",
                 "pattern": "ENGINE Serving on (https?://\\S+|[0-9]+)",
-                "uriFormat": "%s://localhost:%s/about.html"
+                "uriFormat": "http://localhost:8080/index.html"
             }
         }
     ]

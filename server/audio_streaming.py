@@ -46,6 +46,7 @@ class AudioThread(Thread):
         super().__init__()
         self.connections = {first_connection}
         self.last_send_time = time()
+        self.true_latency = AUDIO_BUFFER_LATENCY
         self.thread_id = thread_id
         AUDIO_THREADS[thread_id] = self
         self.start()
@@ -67,6 +68,7 @@ class AudioThread(Thread):
                 current_time = time()
                 dt = current_time - self.last_send_time
                 self.last_send_time = current_time
+                self.true_latency = dt
                 send_size = min(round(dt * AUDIO_SAMPLE_RATE), AUDIO_BUF_SIZE)
 
                 buffer = np.zeros([len(connections), send_size], dtype=np.int32)
@@ -101,10 +103,10 @@ class AudioStreamWebSocketHandler(WebSocket):
         self.my_thread = None
         self.lock = Lock()
         self.buffer = ENTER_NOTIFICATION.copy()
-        self.thread = Thread(target=self.sending_thread)
         self.is_closed = False
         self.buffers_to_send = []
         self.connectTime = time()
+        self.thread = Thread(target=self.sending_thread)
         self.thread.start()
         Thread(target=self.timeout_thread).start()
 
@@ -159,7 +161,7 @@ class AudioStreamWebSocketHandler(WebSocket):
                         self.send(TextMessage(json.dumps({"sample_rate": AUDIO_SAMPLE_RATE})))
             elif self.my_thread is not None:    
                 with self.lock:
-                    if len(self.buffer) > 1.618 * AUDIO_SAMPLE_RATE * AUDIO_BUFFER_LATENCY:
+                    if len(self.buffer) > 1.618 * AUDIO_SAMPLE_RATE * self.my_thread.true_latency:
                         self.buffer.extend(value for i, value in enumerate(data[:AUDIO_BUF_SIZE-len(self.buffer)]) if i & 15)
                     else:
                         self.buffer.extend(data[:AUDIO_BUF_SIZE-len(self.buffer)])

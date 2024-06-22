@@ -2,29 +2,10 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "docker-build: transient",
+            "label": "docker-build",
             "command": "docker",
+            "dependsOn": ["docker-run: remove container"],
             "args": ["build", "--build-arg", "TRANSIENT_DATABASE=TRUE", "-t", "anonymous-messenger", "."],
-            "type": "shell"
-        },
-        {
-            "label": "docker-build: non-transient",
-            "command": "docker",
-            "args": ["build", "--build-arg", "TRANSIENT_DATABASE=FALSE", "-t", "anonymous-messenger", "."],
-            "type": "shell"
-        },
-        {
-            "label": "docker-run: transient",
-            "dependsOn": ["docker-build: transient"],
-            "command": "docker",
-            "args": ["build", "run", "-p", "8080:8080", "-d", "--name", "anonymous-messenger", "anonymous-messenger"],
-            "type": "shell"
-        },
-        {
-            "label": "docker-run: non-transient",
-            "dependsOn": ["docker-build: non-transient"],
-            "command": "docker",
-            "args": ["run", "--env-file", ".env", "-p", "8080:8080", "-d", "--name", "anonymous-messenger", "anonymous-messenger"],
             "type": "shell"
         },
         {
@@ -34,11 +15,46 @@
             "type": "shell"
         },
         {
-            "label": "docker-run: kill container",
+            "label": "docker-run: remove container",
             "command": "docker",
-            "dependsOn": ["docker-build: non-transient"],
             "args": ["container", "rm", "-f", "anonymous-messenger"],
             "type": "shell"
         },
+        {
+            "type": "docker-run",
+            "label": "docker-run: debug",
+            "dockerRun": {
+                "containerName": "anonymous-messenger",
+                "image": "anonymous-messenger",
+                "env": {"TRANSIENT_DATABASE":"FALSE"},
+                "ports": [{
+                    "containerPort": 8080,
+                    "hostPort": 8080
+                }]
+            },
+            "dependsOn": ["docker-build"],
+            "python": {
+              "args": [],
+              "file": "/usr/src/AnonymousMessenger/server/start.py"
+            }
+          },
+          {
+              "type": "docker-run",
+              "label": "docker-run: debug transient",
+              "dockerRun": {
+                  "containerName": "anonymous-messenger",
+                  "image": "anonymous-messenger",
+                  "env": {"TRANSIENT_DATABASE":"TRUE"},
+                  "ports": [{
+                      "containerPort": 8080,
+                      "hostPort": 8080
+                  }]
+              },
+              "dependsOn": ["docker-build"],
+              "python": {
+                "args": [],
+                "file": "/usr/src/AnonymousMessenger/server/start.py"
+              }
+            }
     ]
 }

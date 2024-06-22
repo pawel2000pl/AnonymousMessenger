@@ -276,7 +276,7 @@ class Root:
             cherrypy.log("Audio handler created: %s" % repr(cherrypy.request.ws_handler))
 
 
-if __name__ == "__main__":
+def run():
     WebSocketPlugin(cherrypy.engine).subscribe()
     cherrypy.tools.websocket = WebSocketTool()
 
@@ -305,3 +305,7 @@ if __name__ == "__main__":
 
     cherrypy.engine.start()
     cherrypy.engine.block()
+
+
+if __name__ == "__main__":
+    run()

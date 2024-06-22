@@ -24,4 +24,4 @@ RUN find "$APP_PATH/static" \( -name "*.html" -or -name "*.css" -or -name "*.js"
     sed -i -r 's/[\r]+/\n/g;s/[\n]+/\n/g;s/[\t ]+$//g;s/^[\t ]+//g;s/[\t ]{2,}/ /g' {} \;
 
 EXPOSE 8080
-CMD bash start.sh
+CMD python3 server/start.py
