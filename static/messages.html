@@ -15,9 +15,12 @@
             <tr>
                 <td id="messages-menu-column" class="messages-menu">
                     <div class="menu-list">
-                        <div id="logo-in-menu"
-                            onclick="window.location = '/';"
-                            onauxclick="if (event.button==1) window.open('/', '_blank');">
+                        <div id="logo-in-menu" onmouseup="
+                                if (event.button == 0)
+                                    window.location = '/';
+                                if (event.button == 1)
+                                    window.open('/', '_blank');
+                            ">
                             AnonymousMessenger
                         </div>
                         <div id="generate-new-user-div" class="darkest-background menu-summary">
@@ -31,10 +34,12 @@
                                     <label for="new-user-can-create" class="translatable">User can create new users</label>
                                     <br>
                                     <label for="new-user-output" class="translatable">Generated hash</label>
-                                    <input id="new-user-output" class="new-user-input translatable" readonly="true" value="Here will be generated access code">
+                                    <input id="new-user-output" class="new-user-input new-user-input-less-width translatable" readonly="true" value="Here will be generated access code">
+                                    <button class="black-button copy-button" onclick="navigator.clipboard.writeText(document.getElementById('new-user-output').value);">&#128466</button>
                                     <br>
                                     <label for="new-user-output-href" class="translatable">Generated link</label>
-                                    <input id="new-user-output-href" class="new-user-input translatable" readonly="true" value="Here will be generated link with access code">
+                                    <input id="new-user-output-href" class="new-user-input new-user-input-less-width translatable" readonly="true" value="Here will be generated link with access code">
+                                    <button class="black-button copy-button" onclick="navigator.clipboard.writeText(document.getElementById('new-user-output-href').value);">&#128466</button>
                                     <br>
                                 </p>
                                 <input type="button" id="new-user-btn" class="translatable black-button" value="Generate">
@@ -84,7 +89,7 @@
                     <div>
                         <div id="new-messages-label" class="translatable" style="display: none;">New messages</div>
                         <div id="message-editor" contenteditable="true"></div>
-                        <div id="send-message-btn" class="black-button">&#8680</div>
+                        <div id="send-message-btn" class="black-button">&#10146</div>
                     </div>
                 </td>
             </tr>

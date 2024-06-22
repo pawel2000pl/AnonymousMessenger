@@ -39,6 +39,7 @@
                             <input id="userhash-input" type="text" value="" style="width: 350px;">
                             <br>
                             <br>
+                            <input class="translatable black-button" type="button" onclick="navigator.clipboard.readText().then((value)=>{document.getElementById('userhash-input').value = value})" value="Paste from clipboard">
                             <input id="join-chat-btn" class="translatable black-button" type="button" value="Join">
                         </form>
                     </div>
