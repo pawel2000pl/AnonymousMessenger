@@ -1,6 +1,7 @@
 import os
 import json
 import cherrypy
+import warnings
 import messenger
 import numpy as np
 
@@ -23,6 +24,7 @@ HIGH_NOTE_FILENAME = MY_PATH + '../static/high.wav'
 AUDIO_THREADS = dict()
 
 def load_wave(filename, level=1.0):
+    warnings.simplefilter('ignore', wavfile.WavFileWarning)
     samplerate, data = wavfile.read(filename)
     dest_length = round(data.shape[0] / samplerate * AUDIO_SAMPLE_RATE)
     sample_map = np.linspace(0.5, data.shape[0]-0.5, dest_length, dtype=int)
@@ -35,6 +37,7 @@ def load_wave(filename, level=1.0):
     data[data < -127] = -127
     return list(np.round(data))
 
+
 LOW_NOTE = load_wave(LOW_NOTE_FILENAME, 0.3)
 HIGH_NOTE = load_wave(HIGH_NOTE_FILENAME, 0.3)
 ENTER_NOTIFICATION = LOW_NOTE + HIGH_NOTE
@@ -44,6 +47,7 @@ class AudioThread(Thread):
 
     def __init__(self, first_connection, thread_id):
         super().__init__()
+        self.daemon = True
         self.connections = {first_connection}
         self.last_send_time = time()
         self.true_latency = AUDIO_BUFFER_LATENCY
@@ -86,6 +90,10 @@ class AudioThread(Thread):
                     if len(connection.buffers_to_send) < 5 and np.sum(np.abs(buffer[i])) != 0:                        
                         connection.buffers_to_send.append(buffer[i].tobytes())
             
+            except (KeyboardInterrupt, SystemExit):
+                for connection in list(self.connections):
+                    connection.close()
+                break
             except Exception as err:
                 log_error(err)
         
@@ -100,7 +108,6 @@ class AudioStreamWebSocketHandler(WebSocket):
         self.userhash = ""
         self.token = ""
         self.thread_id = 0
-        self.my_thread = None
         self.lock = Lock()
         self.buffer = ENTER_NOTIFICATION.copy()
         self.is_closed = False
@@ -113,7 +120,7 @@ class AudioStreamWebSocketHandler(WebSocket):
 
     def timeout_thread(self):
         sleep(15)
-        if self.my_thread is None:
+        if self.thread_id == 0:
             self.close()
 
 
@@ -124,12 +131,14 @@ class AudioStreamWebSocketHandler(WebSocket):
             else:
                 try:
                     buf = self.buffers_to_send.pop(0)
-                    self.send(buf, binary=True)                                           
+                    self.send(buf, binary=True)        
+                except (KeyboardInterrupt, SystemExit):
+                    break
                 except (AttributeError, TimeoutError): # raised when connection is already closed
                     self.close()
                     break
                 except BrokenPipeError: # raised when connections are closed but because of SIGTERM
-                    self.my_thread.connections = set()
+                    AUDIO_THREADS[self.thread_id].connections = set()
                     break
                 except Exception as err:
                     log_error(err)
@@ -138,54 +147,63 @@ class AudioStreamWebSocketHandler(WebSocket):
     def received_message(self, message: Message):
         try:
             data = message.data
-            connection = messenger.get_database_connection()
-            cursor = connection.cursor()
-
             if data[0] == ord('{'):
                 content = json.loads(message.data.decode(message.encoding))
                 action = content.get('action', '')
-                if action == 'subscribe' and self.my_thread is None:
+                if action == 'subscribe' and self.thread_id == 0:
                     self.userhash = content.get('userhash', '')
                     self.token = content.get('token', '')
+                    connection = messenger.get_database_connection()
+                    cursor = connection.cursor()
                     self.thread_id = messenger.get_thread_id(cursor, self.userhash, self.token)                    
                     if self.thread_id is None:
                         self.close()
                         return
                     if self.thread_id not in AUDIO_THREADS:
                         AUDIO_THREADS[self.thread_id] = AudioThread(self, self.thread_id)
-                    self.my_thread = AUDIO_THREADS[self.thread_id]
-                    if len(self.my_thread.connections) >= AUDIO_MAX_CONNECTIONS:
+                    elif len(AUDIO_THREADS[self.thread_id].connections) >= AUDIO_MAX_CONNECTIONS:
                         self.close()
                     else:
-                        self.my_thread.connections.add(self)
-                        self.send(TextMessage(json.dumps({"sample_rate": AUDIO_SAMPLE_RATE})))
-            elif self.my_thread is not None:    
+                        AUDIO_THREADS[self.thread_id].connections.add(self)
+                    self.send(TextMessage(json.dumps({"sample_rate": AUDIO_SAMPLE_RATE})))
+            elif self.thread_id:    
+                dest_size = AUDIO_SAMPLE_RATE * AUDIO_THREADS[self.thread_id].true_latency
                 with self.lock:
-                    if len(self.buffer) > 1.618 * AUDIO_SAMPLE_RATE * self.my_thread.true_latency:
-                        self.buffer.extend(value for i, value in enumerate(data[:AUDIO_BUF_SIZE-len(self.buffer)]) if i & 15)
+                    buffer_len = len(self.buffer)
+                    add_size = min(AUDIO_BUF_SIZE-buffer_len, len(data))
+                    if add_size == 0:
+                        return
+                    if 1.618 * dest_size > buffer_len:
+                        self.buffer.extend(data[:add_size])
+                    elif 2.618 * dest_size > buffer_len:
+                        self.buffer.extend(value for i, value in enumerate(data[:add_size]) if i & 15)
+                    elif 4.235 * dest_size > buffer_len:
+                        self.buffer.extend(value for i, value in enumerate(data[:add_size]) if i & 7)
+                    elif 6.854 * dest_size > buffer_len:
+                        self.buffer.extend(value for i, value in enumerate(data[:add_size]) if i & 3)
                     else:
-                        self.buffer.extend(data[:AUDIO_BUF_SIZE-len(self.buffer)])
+                        self.buffer.extend(data[:add_size:2])                        
 
         except Exception as err:
             log_error(err)
 
 
     def get_buffer_to_send(self, send_size):
-        if send_size > len(self.buffer):
-            return 0
         with self.lock:
-            send_buffer = np.array(self.buffer[:send_size], dtype=np.uint8).astype(np.int8)
-            self.buffer = self.buffer[send_size:]
+            if send_size > len(self.buffer):
+                return 0
+            send_buffer = np.fromiter((self.buffer.pop(0) for _ in range(send_size)), dtype=np.uint8).astype(np.int8)
         return send_buffer
         
 
     def closed(self, code, reason=""):
         cherrypy.log('Audio connection %s closed'%self.userhash[:8])
+        self.is_closed = True
         self.buffer = LEAVE_NOTIFICATION.copy()
         sleep(2 * len(self.buffer) / AUDIO_SAMPLE_RATE)
-        if self.my_thread is not None:
-            self.my_thread.connections.remove(self)
-        self.is_closed = True
+        my_thread = AUDIO_THREADS[self.thread_id]
+        if my_thread is not None:
+            my_thread.connections.remove(self)
 
 
 def clean_old_audio_connections():

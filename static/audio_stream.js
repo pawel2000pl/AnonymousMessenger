@@ -29,27 +29,33 @@ async function startAudioStream() {
     await audioContext.audioWorklet.addModule('/audio_processor.js');
     const audioProcessorNode = new AudioWorkletNode(audioContext, 'audio-processor');
 
-    audioSource.connect(audioProcessorNode);
-    audioProcessorNode.connect(audioContext.destination);
+    const biquadFilter = new BiquadFilterNode(audioContext, {
+        type: "lowshelf",
+        frequency: 8000,
+        gain: 1
+    });
+
+    audioSource.connect(biquadFilter);   
+    biquadFilter.connect(audioProcessorNode);
 
     var stopStreamEvent = ()=>{};
     var muted = false;
     
     const stopStream = function() {
+        stopStreamEvent();
         audioSource.disconnect();
         audioProcessorNode.disconnect();
     };
 
+
     const playAudioFragment = function(audioData) {
         if (audioContext === null)
-            return;
-    
+            return;    
+        const audioBufferSource = audioContext.createBufferSource(); 
+        audioBufferSource.connect(audioContext.destination);  
         const audioBuffer = audioContext.createBuffer(1, audioData.length, audioContext.sampleRate);
-        const audioBufferDestination = audioContext.destination;
-        const audioBufferSource = audioContext.createBufferSource();    
         audioBuffer.getChannelData(0).set(audioData.map(value=>value/127));
         audioBufferSource.buffer = audioBuffer;
-        audioBufferSource.connect(audioBufferDestination);
         audioBufferSource.start();
     };
 
@@ -96,7 +102,7 @@ const unmuteChatBtn = document.getElementById('unmute-voice-chat');
 (async ()=>{
     const response = await fetch('/query/allow_audio_stream');
     const result = await response.json();
-    if (result.status === "ok" && result.result)
+    if (result.status === "ok" && result.result && navigator.mediaDevices !== undefined)
         voiceChatDetails.style.display = '';
 })();
 
@@ -125,6 +131,7 @@ joinChatBtn.onclick = async ()=>{
     voiceChatStatus = await startAudioStream();
     refreshVoiceChatInterface();
     voiceChatStatus.onclose(()=>{
+        voiceChatStatus = null;
         refreshVoiceChatInterface();
         notification.play();
     });

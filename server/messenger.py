@@ -274,8 +274,8 @@ def maintain(cursor):
 
 def can_create_user(cursor, userhash, token=""):
     cursor.execute(f"SELECT can_create FROM users WHERE id = ({VALIDATE_ACCESS_QUERY})", [userhash, token])
-    can_create, = cursor.fetchone()
-    return {"status": "ok", "result": bool(can_create)}
+    result = cursor.fetchone()
+    return {"status": "ok", "result": bool(result is not None and result[0])}
 
 
 def close_user(cursor, userhash, token=""):
