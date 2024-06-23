@@ -2,5 +2,6 @@
 .env
 .gitignore
 .dockerignore
+.directory
 Dockerfile
 __pycache__
