@@ -83,13 +83,15 @@ class AudioThread(Thread):
 
                 buffer = np.zeros([len(connections), send_size], dtype=np.int32)
                 for i, connection in enumerate(connections):
-                    buffer[i] = connection.get_buffer_to_send(send_size)
+                    connection_buffer = connection.get_buffer_to_send(send_size)
+                    if connection_buffer is not None:
+                        buffer[i] = connection_buffer
 
                 if not buffer.any():
                     continue
                 buffer = np.sum(buffer, axis=0) - buffer
                 buffer.clip(-127, 127, out=buffer)
-                buffer = buffer.astype(np.int8)
+                buffer = buffer.astype(np.int8, copy=False)
                 for i, connection in enumerate(connections):
                     if len(connection.buffers_to_send) < 5 and np.sum(np.abs(buffer[i])) != 0:                        
                         connection.buffers_to_send.append(buffer[i].tobytes())
@@ -175,14 +177,18 @@ class AudioStreamWebSocketHandler(WebSocket):
                 dest_size = AUDIO_SAMPLE_RATE * AUDIO_THREADS[self.thread_id].true_latency
                 with self.lock:
                     add_size = min(AUDIO_BUF_SIZE-self.buffer_length, len(data))
-                    if add_size <= 0:
-                        return
+                    compression_index = max(0, int(math.log((1+self.buffer_length) / dest_size, 1.618)))
+                    
+                    if add_size <= 0 or compression_index >= len(COMPRESSIONS_MAPS):
+                        return                    
+                    if add_size < len(data):
+                        data = itertools.islice(data, add_size)
+                    if compression_index > 0:
+                        data = itertools.compress(data, COMPRESSIONS_MAPS[compression_index])
+                        add_size = COMPRESSIONS_SIZES[compression_index][add_size]
 
-                    compression_index = max(0, int(math.log((1+self.buffer_length) / dest_size, 1.618)))                    
-                    if compression_index < len(COMPRESSIONS_MAPS):
-                        compression_map = COMPRESSIONS_MAPS[compression_index]                        
-                        self.recv_buffers.append(itertools.compress(itertools.islice(data, add_size), compression_map))
-                        self.buffer_length += COMPRESSIONS_SIZES[compression_index][add_size]
+                    self.recv_buffers.append(data)
+                    self.buffer_length += add_size
                                        
 
         except Exception as err:
@@ -192,12 +198,11 @@ class AudioStreamWebSocketHandler(WebSocket):
     def get_buffer_to_send(self, send_size):
         with self.lock:
             if send_size > self.buffer_length:
-                return 0
+                return None
             self.buffer_length -= send_size
             buffer_iter = itertools.chain.from_iterable(self.recv_buffers) if len(self.recv_buffers) > 1 else self.recv_buffers[0]
             self.recv_buffers = [buffer_iter]
-            send_buffer = np.fromiter(buffer_iter, count=send_size, dtype=np.uint8).astype(np.int8, copy=False)
-        return send_buffer
+            return np.fromiter(buffer_iter, count=send_size, dtype=np.uint8).astype(np.int8, copy=False)        
         
 
     def closed(self, code, reason=""):

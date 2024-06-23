@@ -30,13 +30,11 @@ async function startAudioStream() {
     const audioProcessorNode = new AudioWorkletNode(audioContext, 'audio-processor');
 
     const biquadFilter = new BiquadFilterNode(audioContext, {
-        type: "lowshelf",
-        frequency: 8000,
-        gain: 1
+        type: "lowpass",
+        frequency: 8000
     });
 
-    audioSource.connect(biquadFilter);   
-    biquadFilter.connect(audioProcessorNode);
+    audioSource.connect(audioProcessorNode);  
 
     var stopStreamEvent = ()=>{};
     var muted = false;
@@ -51,8 +49,11 @@ async function startAudioStream() {
     const playAudioFragment = function(audioData) {
         if (audioContext === null)
             return;    
+
         const audioBufferSource = audioContext.createBufferSource(); 
-        audioBufferSource.connect(audioContext.destination);  
+        audioBufferSource.connect(biquadFilter);  
+        biquadFilter.connect(audioContext.destination);
+
         const audioBuffer = audioContext.createBuffer(1, audioData.length, audioContext.sampleRate);
         audioBuffer.getChannelData(0).set(audioData.map(value=>value/127));
         audioBufferSource.buffer = audioBuffer;
