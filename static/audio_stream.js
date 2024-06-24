@@ -4,11 +4,14 @@ function constrain(x, min, max) {
     return x < min ? min : x > max ? max : x;
 }
 
-function arrayAbsSum(array) {
-    let sum = 0;
-    for (let i=0;i<array.length;i++)
-        sum += Math.abs(array[i]);
-    return sum;
+function arrayAbsMax(array) {
+    let max = 0;
+    for (let i=0;i<array.length;i++) {
+        const abs = Math.abs(array[i]);
+        if (abs > max)
+            max = abs;
+    }
+    return max;
 }
 
 function resample(array, srcSample, dstSample) { 
@@ -29,6 +32,7 @@ async function startAudioStream() {
     await audioContext.audioWorklet.addModule('/audio_processor.js');
     const audioProcessorNode = new AudioWorkletNode(audioContext, 'audio-processor');
 
+    const gainNode = audioContext.createGain();
     const biquadFilter = new BiquadFilterNode(audioContext, {
         type: "lowpass",
         frequency: 8000
@@ -51,7 +55,8 @@ async function startAudioStream() {
             return;    
 
         const audioBufferSource = audioContext.createBufferSource(); 
-        audioBufferSource.connect(biquadFilter);  
+        audioBufferSource.connect(gainNode); 
+        gainNode.connect(biquadFilter);
         biquadFilter.connect(audioContext.destination);
 
         const audioBuffer = audioContext.createBuffer(1, audioData.length, audioContext.sampleRate);
@@ -80,7 +85,9 @@ async function startAudioStream() {
             const audioData = event.data.map((value)=>constrain(Math.round(127*value), -127, 127));            
             if (audioData[0] == 123) 
                 audioData[0] = 122;
-            if (!muted && arrayAbsSum(audioData) != 0)
+            const absMax = arrayAbsMax(audioData);
+            gainNode.gain.setValueAtTime(muted ? 1 : (1 - absMax/768), audioContext.currentTime);
+            if (!muted && absMax != 0)
                 ws_audio.send(new Int8Array(resample(audioData, audioContext.sampleRate, SERVER_SAMPLE_RATE)).buffer);
         };
     };
