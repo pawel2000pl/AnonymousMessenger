@@ -38,16 +38,17 @@ def load_wave(filename, level=1.0):
     data = (255 * data - 127) * level
     data[data > 127] = 127
     data[data < -127] = -127
-    return list(np.round(data))
+    return np.round(data).astype(np.int8)
 
 
 LOW_NOTE = load_wave(LOW_NOTE_FILENAME, 0.3)
 HIGH_NOTE = load_wave(HIGH_NOTE_FILENAME, 0.3)
-ENTER_NOTIFICATION = LOW_NOTE + HIGH_NOTE
-LEAVE_NOTIFICATION = HIGH_NOTE + LOW_NOTE
+NOTIFICATION_LENGTH = LOW_NOTE.shape[0] + HIGH_NOTE.shape[0]
+ENTER_NOTIFICATION = lambda: itertools.chain(LOW_NOTE, HIGH_NOTE)
+LEAVE_NOTIFICATION = lambda: itertools.chain(HIGH_NOTE, LOW_NOTE)
 
-COMPRESSIONS_MAPS = tuple([list(itertools.repeat(1, AUDIO_BUF_SIZE))] + [[1 if j % i else 0 for j in range(AUDIO_BUF_SIZE)] for i in np.unique(np.logspace(2, 0, 64, dtype=int))[::-1]])
-COMPRESSIONS_SIZES = tuple(tuple(itertools.chain([0], itertools.accumulate(cmap))) for cmap in COMPRESSIONS_MAPS)
+COMPRESSIONS_MAPS = np.array(tuple([[1] * AUDIO_BUF_SIZE] + [[1 if j % i else 0 for j in range(AUDIO_BUF_SIZE)] for i in np.unique(np.logspace(2, 0, 64, dtype=int))[::-1]]), dtype=np.uint8)
+COMPRESSIONS_SIZES = np.array(tuple(tuple(itertools.chain([0], itertools.accumulate(cmap))) for cmap in COMPRESSIONS_MAPS.astype(np.int32)), dtype=np.uint32)
 
 class AudioThread(Thread):
 
@@ -115,8 +116,8 @@ class AudioStreamWebSocketHandler(WebSocket):
         self.token = ""
         self.thread_id = 0
         self.lock = Lock()
-        self.recv_buffers = [(i for i in ENTER_NOTIFICATION)]
-        self.buffer_length = len(ENTER_NOTIFICATION)
+        self.recv_buffers = [ENTER_NOTIFICATION()]
+        self.buffer_length = NOTIFICATION_LENGTH
         self.is_closed = False
         self.buffers_to_send = []
         self.connectTime = time()
@@ -167,7 +168,7 @@ class AudioStreamWebSocketHandler(WebSocket):
                         self.close()
                         return
                     if self.thread_id not in AUDIO_THREADS:
-                        AUDIO_THREADS[self.thread_id] = AudioThread(self, self.thread_id)
+                        AudioThread(self, self.thread_id)
                     elif len(AUDIO_THREADS[self.thread_id].connections) >= AUDIO_MAX_CONNECTIONS:
                         self.close()
                     else:
@@ -209,8 +210,8 @@ class AudioStreamWebSocketHandler(WebSocket):
         cherrypy.log('Audio connection %s closed'%self.userhash[:8])
         self.is_closed = True
         with self.lock:
-            self.buffer_length += len(LEAVE_NOTIFICATION)
-            self.recv_buffers.append(LEAVE_NOTIFICATION)
+            self.buffer_length += NOTIFICATION_LENGTH
+            self.recv_buffers.append(LEAVE_NOTIFICATION())
         sleep(2 * self.buffer_length / AUDIO_SAMPLE_RATE)
         my_thread = AUDIO_THREADS[self.thread_id]
         if my_thread is not None:
