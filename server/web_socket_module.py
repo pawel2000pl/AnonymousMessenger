@@ -34,6 +34,7 @@ def propagate_message(cursor, thread_id, message_id):
     for s in SUBSCRIBTIONS.values():
         active_users.update(o.userhash for o in s)
 
+    push_delivered_successfull = []
     for dest in messenger.push_get_by_thread(cursor, thread_id)['data']:
         if dest['userhash'] == userhash or dest['userhash'] in active_users:
             continue
@@ -49,9 +50,11 @@ def propagate_message(cursor, thread_id, message_id):
                 vapid_private_key=dest['vapid_private_key'],
                 vapid_claims=messenger.VAPID_CLAIMS
             )
-            messenger.push_update_success(cursor, dest['pn_id'])
+            push_delivered_successfull.append(dest['pn_id'])
         except Exception as e:
             log_error(e)        
+    
+    messenger.push_update_success(cursor, push_delivered_successfull)
         
 
 propagate_message_with_cursor = messenger.cursor_provider(propagate_message)

@@ -82,7 +82,7 @@ CREATE TABLE push_notifications (
     hash VARCHAR(64),
     subscription_information LONGBLOB,
     vapid_private_key LONGBLOB,
-    last_derivered_message_timestamp BIGINT NOT NULL DEFAULT 0,
+    last_delivered_message_timestamp BIGINT NOT NULL DEFAULT 0,
     FOREIGN KEY (user) REFERENCES users (id)
 );
 

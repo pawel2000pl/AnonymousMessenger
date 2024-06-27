@@ -1,6 +1,7 @@
 # Simple text messenger
 
 Demo deployed on [anonymous-messenger.onrender.com](https://anonymous-messenger.onrender.com/).
+(First connection may take about 50 seconds because the docker container is suspended in free account on onrender.com)
 
 Available in: english, polish, germany and french.
 (Translated with ChatGPT)
@@ -29,7 +30,8 @@ AES_KEY
 Fast run:
 ```
 # Required .env file with exported all neccessary variables
-APP_PATH='.' bash start.sh
+source .env
+APP_PATH='.' python3 server/start.py
 ```
 
 Works also with VSCode debug (F5).

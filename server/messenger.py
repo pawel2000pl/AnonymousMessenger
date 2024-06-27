@@ -247,20 +247,20 @@ def delete_old_push_notificaions(cursor):
         FROM
             push_notifications
         WHERE
-            last_derivered_message_timestamp <= (
+            last_delivered_message_timestamp <= (
                 SELECT
-                    pn.last_derivered_message_timestamp
+                    pn.last_delivered_message_timestamp
                 FROM
                     push_notifications AS pn
                 WHERE
                     pn.user = push_notifications.user
                 ORDER BY
-                    pn.last_derivered_message_timestamp
+                    pn.last_delivered_message_timestamp
                 LIMIT 1
                 OFFSET {MAX_SUBSCRIPTIONS_PER_USER}
             )
         OR
-            last_derivered_message_timestamp < UNIX_TIMESTAMP() * 1000 - {UNSUBSCRIBE_TIMEOUT}
+            last_delivered_message_timestamp < UNIX_TIMESTAMP() * 1000 - {UNSUBSCRIBE_TIMEOUT}
         """)
     cursor.execute("DELETE FROM push_notifications WHERE id IN (SELECT id FROM pn_to_delete)")
     cursor.execute("DELETE FROM pn_to_delete")
@@ -572,7 +572,7 @@ def push_subscribe(cursor, userhash, token="", subscription_information=dict()):
     hash = my_uuid()
     cursor.execute("""
         INSERT INTO push_notifications
-            (user, subscription_information, vapid_private_key, last_derivered_message_timestamp, hash)
+            (user, subscription_information, vapid_private_key, last_delivered_message_timestamp, hash)
             VALUES
             (%s, AES_ENCRYPT(%s, %s), AES_ENCRYPT(%s, %s), %s, %s)
         """, [user_id, json.dumps(subscription_information).encode('utf-8'), AES_KEY, VAPID_PRIVATE_KEY.encode('utf-8'), AES_KEY, get_timestamp(), hash])
@@ -606,5 +606,9 @@ def push_get_by_thread(cursor, thread_id):
     return {"status": "ok", 'data': [{'pn_id': pnid, 'user_id': uid, 'userhash': hash, 'thread_id': tid, 'subscription_information': json.loads(si.decode('utf-8')), 'vapid_private_key': vpk.decode('utf-8')} for pnid, uid, hash, tid, si, vpk in cursor]}
 
 
-def push_update_success(cursor, id):
-    cursor.execute("UPDATE push_notifications SET last_derivered_message_timestamp = %s WHERE id = %s", [get_timestamp(), id])
+def push_update_success(cursor, ids):
+    if isinstance(ids, int) or isinstance(ids, str):
+        return push_update_success(cursor, [ids])
+    if len(ids) == 0:
+        return
+    cursor.execute("UPDATE push_notifications SET last_delivered_message_timestamp = %s WHERE id IN ("+"%s"*len(ids)+")", [get_timestamp()]+ids)
