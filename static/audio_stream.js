@@ -69,28 +69,31 @@ async function startAudioStream() {
     let ws_audio = new WebSocket(protocol + "//"+window.location.host+"/audio");
     var SERVER_SAMPLE_RATE = 8000;
 
-    ws_audio.onopen = ()=>{
-        ws_audio.send(JSON.stringify({"action": "subscribe", "userhash": userhash, token: localStorage.token??""}));
-        ws_audio.onmessage = async (message)=>{
-            if (!(message.data instanceof ArrayBuffer || message.data instanceof Blob)) {
-                const settings = JSON.parse(message.data);
-                if (settings.sample_rate != undefined) SERVER_SAMPLE_RATE = settings.sample_rate;
-            } else {
-                playAudioFragment(resample(new Int8Array(await message.data.arrayBuffer()), SERVER_SAMPLE_RATE, audioContext.sampleRate));
-            }
-        };
-        ws_audio.onclose = stopStream;
+    await new Promise((resolve)=>{   
+        ws_audio.onopen = ()=>{
+            ws_audio.send(JSON.stringify({"action": "subscribe", "userhash": userhash, token: localStorage.token??""}));
+            ws_audio.onmessage = async (message)=>{
+                if (!(message.data instanceof ArrayBuffer || message.data instanceof Blob)) {
+                    const settings = JSON.parse(message.data);
+                    if (settings.sample_rate != undefined) SERVER_SAMPLE_RATE = settings.sample_rate;
+                } else {
+                    playAudioFragment(resample(new Int8Array(await message.data.arrayBuffer()), SERVER_SAMPLE_RATE, audioContext.sampleRate));
+                }
+            };
+            ws_audio.onclose = stopStream;
 
-        audioProcessorNode.port.onmessage = (event) => {
-            const audioData = event.data.map((value)=>constrain(Math.round(127*value), -127, 127));            
-            if (audioData[0] == 123) 
-                audioData[0] = 122;
-            const absMax = arrayAbsMax(audioData);
-            gainNode.gain.setValueAtTime(muted ? 1 : (1 - absMax/768), audioContext.currentTime);
-            if (!muted && absMax != 0)
-                ws_audio.send(new Int8Array(resample(audioData, audioContext.sampleRate, SERVER_SAMPLE_RATE)).buffer);
+            audioProcessorNode.port.onmessage = (event) => {
+                const audioData = event.data.map((value)=>constrain(Math.round(127*value), -127, 127));            
+                if (audioData[0] == 123) 
+                    audioData[0] = 122;
+                const absMax = arrayAbsMax(audioData);
+                gainNode.gain.setValueAtTime(muted ? 1 : (1 - absMax/768), audioContext.currentTime);
+                if (!muted && absMax != 0)
+                    ws_audio.send(new Int8Array(resample(audioData, audioContext.sampleRate, SERVER_SAMPLE_RATE)).buffer);
+            };            
+            resolve();
         };
-    };
+    });
 
     return {
         close: ()=>{audioProcessorNode.port.onmessage = ()=>{}; ws_audio.close();},

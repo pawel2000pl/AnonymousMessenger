@@ -215,7 +215,7 @@ class AudioStreamWebSocketHandler(WebSocket):
         sleep(2 * self.buffer_length / AUDIO_SAMPLE_RATE)
         my_thread = AUDIO_THREADS[self.thread_id]
         if my_thread is not None:
-            my_thread.connections.remove(self)
+            my_thread.connections.difference_update((self,))
 
 
 def clean_old_audio_connections():
