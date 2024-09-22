@@ -13,12 +13,14 @@ from threading import Thread, Lock
 from messenger_logs import log_error
 from ws4py.websocket import WebSocket
 from ws4py.messaging import Message, BinaryMessage, TextMessage
+from web_socket_module import SUBSCRIBTIONS as message_subscribtions
 
 MAX_STREAM_TIME = messenger.get_int_env('MAX_STREAM_TIME', 43200)
 AUDIO_BUFFER_LATENCY = messenger.get_int_env('AUDIO_BUFFER_LATENCY', 120) / 1000
 AUDIO_SAMPLE_RATE = messenger.get_int_env('AUDIO_SAMPLE_RATE', 16000)
 AUDIO_BUF_SIZE = messenger.get_int_env('AUDIO_BUF_SIZE', 16384)
 AUDIO_MAX_CONNECTIONS = messenger.get_int_env('AUDIO_MAX_CONNECTIONS', 64)
+AUDIO_STREAM_TIMEOUT = messenger.get_int_env('AUDIO_STREAM_TIMEOUT', 5)
 
 MY_PATH = os.path.dirname(os.path.abspath(__file__)) + "/"
 LOW_NOTE_FILENAME = MY_PATH + '../static/low.wav'
@@ -61,6 +63,15 @@ class AudioThread(Thread):
         self.thread_id = thread_id
         AUDIO_THREADS[thread_id] = self
         self.start()
+
+
+    def send_update_user_list(self, cursor):
+        message_ws = message_subscribtions[self.thread_id]
+        if len(message_ws) == 0: return
+        user_list = [item["username"] for item in messenger.get_users_by_list(cursor, list(set(ws.userhash for ws in AUDIO_THREADS[self.thread_id].connections)))]
+        for ws in message_ws:
+            txt_msg = TextMessage(json.dumps({"action": "update_voice_chat_list", "user_list": user_list}))
+            Thread(target=lambda ws=ws, msg=txt_msg: ws.send(msg)).start()
 
 
     def clean_old_connections(self):
@@ -127,7 +138,7 @@ class AudioStreamWebSocketHandler(WebSocket):
 
 
     def timeout_thread(self):
-        sleep(15)
+        sleep(AUDIO_STREAM_TIMEOUT)
         if self.thread_id == 0:
             self.close()
 
@@ -174,6 +185,8 @@ class AudioStreamWebSocketHandler(WebSocket):
                     else:
                         AUDIO_THREADS[self.thread_id].connections.add(self)
                     self.send(TextMessage(json.dumps({"sample_rate": AUDIO_SAMPLE_RATE})))
+                    AUDIO_THREADS[self.thread_id].send_update_user_list(cursor)
+
             elif self.thread_id:    
                 dest_size = AUDIO_SAMPLE_RATE * AUDIO_THREADS[self.thread_id].true_latency
                 with self.lock:
@@ -215,7 +228,9 @@ class AudioStreamWebSocketHandler(WebSocket):
         sleep(2 * self.buffer_length / AUDIO_SAMPLE_RATE)
         my_thread = AUDIO_THREADS[self.thread_id]
         if my_thread is not None:
-            my_thread.connections.difference_update((self,))
+            my_thread.connections.discard(self)
+        connection = messenger.get_database_connection()
+        my_thread.send_update_user_list(connection.cursor())
 
 
 def clean_old_audio_connections():

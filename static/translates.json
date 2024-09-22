@@ -60,6 +60,7 @@
         "User can create new users": "User can create new users",
         "User created. Login within 5 minutes to confirm the registration": "User created. Login within 5 minutes to confirm the registration",
         "User hash": "User hash",
+        "User list": "User list",
         "Username": "Username",
         "Voice chat": "Voice chat"
     },
@@ -124,6 +125,7 @@
         "User can create new users": "U\u017cytkownik mo\u017ce dodawa\u0107 nowych u\u017cytkownik\u00f3w",
         "User created. Login within 5 minutes to confirm the registration": "U\u017cytkownik utworzony. Zaloguj si\u0119 w ci\u0105gu 5 minut, aby potwierdzi\u0107 rejestracj\u0119",
         "User hash": "Kod dost\u0119pu u\u017cytkownika",
+        "User list": "Lista u\u017cytkownik\u00f3w",
         "Username": "Nazwa u\u017cytkownika",
         "Voice chat": "Czat g\u0142osowy"
     },
@@ -188,6 +190,7 @@
         "User can create new users": "Benutzer kann neue Benutzer erstellen",
         "User created. Login within 5 minutes to confirm the registration": "Benutzer erstellt. Melden Sie sich innerhalb von 5 Minuten an, um die Registrierung zu best\u00e4tigen",
         "User hash": "Benutzercode",
+        "User list": "Benutzerliste",
         "Username": "Benutzername",
         "Voice chat": "Sprachchat"
     },
@@ -252,6 +255,7 @@
         "User can create new users": "L'utilisateur peut cr\u00e9er de nouveaux utilisateurs",
         "User created. Login within 5 minutes to confirm the registration": "Utilisateur cr\u00e9\u00e9. Connectez-vous dans les 5 minutes pour confirmer l'inscription",
         "User hash": "Code d'acc\u00e8s utilisateur",
+        "User list": "Liste des utilisateurs",
         "Username": "Nom d'utilisateur",
         "Voice chat": "Chat vocal"
     }

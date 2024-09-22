@@ -47,12 +47,20 @@
                         </div>
                         <div  id="voice-chat-details" style="display:none;" class="darkest-background menu-summary">
                             <details>
-                                <summary class="summary-label translatable">Voice chat</summary>
-                               
+                                <summary class="summary-label translatable">Voice chat</summary>                               
                                 <input type="button" id="join-voice-chat" class="translatable black-button" value="Join">
                                 <input type="button" id="leave-voice-chat" class="translatable black-button" value="Leave">
                                 <input type="button" id="mute-voice-chat" class="translatable black-button" value="Mute">
                                 <input type="button" id="unmute-voice-chat" class="translatable black-button" value="Unmute">
+                                <details id="audio-users-list">
+                                    <summary class="summary-label">
+                                        <span class="translatable">User list</span> 
+                                        <span> (</span>
+                                        <span id="voice-chat-users-count">0</span>
+                                        <span>):</span>
+                                    </summary>
+                                    <ul id="voice-chat-users-list"></ul>
+                                </details>
                             </details>
                         </div>
                         <div class="darkest-background menu-summary">

@@ -357,4 +357,6 @@ hr {
     height: 1.4em;
 }
 
-
+#audio-users-list {
+    font-size: smaller;
+}

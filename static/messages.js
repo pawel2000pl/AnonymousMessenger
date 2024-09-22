@@ -9,6 +9,9 @@ const newMessagesLabel = document.getElementById('new-messages-label');
 const menuButton = document.getElementById('menu-button');
 const messagesMenuColumn = document.getElementById('messages-menu-column');
 
+const voiceChatUsersCount = document.getElementById('voice-chat-users-count');
+const voiceChatuserList = document.getElementById('voice-chat-users-list');
+
 const notification = new Audio('/notification.ogg');
 
 var messageBatch = 32;
@@ -275,9 +278,8 @@ const connectWS = function () {
                         messagesList.removeChild(messagesList.firstElementChild);
                 }
             }
-            if (playSound) {
+            if (playSound)
                 notification.play();
-            }
         }
         if (data.action == "ordered_messages") {
             addMessages(messages);
@@ -285,6 +287,15 @@ const connectWS = function () {
                 messagesList.scrollTop = messagesList.scrollHeight;
                 ws.send(JSON.stringify({"action": "set_as_readed"}));
             }
+        }
+        if (data.action == "update_voice_chat_list") {
+            voiceChatUsersCount.textContent = data.user_list.length.toLocaleString();
+            voiceChatuserList.innerHTML = "";
+            data.user_list.forEach((a_username)=>{
+                const li = document.createElement('li');
+                li.textContent = a_username;
+                voiceChatuserList.appendChild(li);
+            });
         }
     };
     ws.onclose = ()=>{setTimeout(connectWS, MESSAGE_SYNC_INTERVAL)};

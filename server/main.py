@@ -9,7 +9,7 @@ from tasks import Task
 from functools import wraps
 from messenger_logs import log_error, log_statistic, save_logs
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
-from audio_streaming import AudioStreamWebSocketHandler, clean_old_audio_connections
+from audio_streaming import AudioStreamWebSocketHandler, clean_old_audio_connections, AUDIO_THREADS
 from web_socket_module import ChatWebSocketHandler, NotifyWebSocketHandler, propagate_message_async, clean_old_connections
 
 NO_ACTIVITY_LIFESPAN = messenger.get_int_env('NO_ACTIVITY_LIFESPAN', 7*24*3600)
@@ -265,6 +265,14 @@ class Root:
     @cherrypy.expose()
     def ws(self):
         cherrypy.log("Handler created: %s" % repr(cherrypy.request.ws_handler))
+
+        def send_audio_list(ws):
+            at = AUDIO_THREADS.get(ws.thread_id, None)
+            if at is None: return
+            connection = messenger.get_database_connection()
+            at.send_update_user_list(connection.cursor())
+
+        cherrypy.request.ws_handler.on_subscribe = send_audio_list
 
     @cherrypy.expose()
     def ws_multi_lite(self):

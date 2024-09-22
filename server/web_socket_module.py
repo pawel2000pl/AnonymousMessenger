@@ -79,6 +79,7 @@ class ChatWebSocketHandler(WebSocket):
         self.token = ""
         self.thread_id = 0
         self.connectTime = time()
+        self.on_subscribe = lambda _: None
 
 
     def received_message(self, message: Message):
@@ -96,6 +97,7 @@ class ChatWebSocketHandler(WebSocket):
                     self.close()
                     return
                 SUBSCRIBTIONS[self.thread_id].add(self)
+                self.on_subscribe(self)
 
             if action == 'message':
                 text = content.get('message', '')
@@ -130,7 +132,7 @@ class ChatWebSocketHandler(WebSocket):
         try:
             cherrypy.log('Connection %s closed'%self.userhash[:8])
             if self.thread_id in SUBSCRIBTIONS and self in SUBSCRIBTIONS[self.thread_id]:
-                SUBSCRIBTIONS[self.thread_id].remove(self)
+                SUBSCRIBTIONS[self.thread_id].discard(self)
         except Exception as err:
             log_error(err)
 
