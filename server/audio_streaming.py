@@ -9,6 +9,7 @@ import numpy as np
 
 from time import sleep, time
 from scipy.io import wavfile
+from collections import deque
 from threading import Thread, Lock
 from messenger_logs import log_error
 from ws4py.websocket import WebSocket
@@ -68,7 +69,12 @@ class AudioThread(Thread):
     def send_update_user_list(self, cursor):
         message_ws = message_subscribtions[self.thread_id]
         if len(message_ws) == 0: return
-        user_list = [item["username"] for item in messenger.get_users_by_list(cursor, list(set(ws.userhash for ws in AUDIO_THREADS[self.thread_id].connections)))]
+        try:
+            connected = set(ws.userhash for ws in AUDIO_THREADS[self.thread_id].connections)
+            user_data = messenger.get_users_by_list(cursor, list(connected))
+            user_list = [item["username"] for item in user_data]
+        except KeyError:
+            user_list = []
         for ws in message_ws:
             txt_msg = TextMessage(json.dumps({"action": "update_voice_chat_list", "user_list": user_list}))
             Thread(target=lambda ws=ws, msg=txt_msg: ws.send(msg)).start()
@@ -130,7 +136,7 @@ class AudioStreamWebSocketHandler(WebSocket):
         self.recv_buffers = [ENTER_NOTIFICATION()]
         self.buffer_length = NOTIFICATION_LENGTH
         self.is_closed = False
-        self.buffers_to_send = []
+        self.buffers_to_send = deque()
         self.connectTime = time()
         self.thread = Thread(target=self.sending_thread)
         self.thread.start()
@@ -149,7 +155,7 @@ class AudioStreamWebSocketHandler(WebSocket):
                 sleep(AUDIO_BUFFER_LATENCY)
             else:
                 try:
-                    buf = self.buffers_to_send.pop(0)
+                    buf = self.buffers_to_send.popleft()
                     self.send(buf, binary=True)        
                 except (KeyboardInterrupt, SystemExit):
                     break

@@ -371,7 +371,7 @@ def add_user(cursor, create_on, username: str = None, can_create=True, token="")
 def get_users_by_list(cursor, hashlist):
     hashlist_len = len(hashlist)
     if hashlist_len == 0: return []
-    cursor.execute("SELECT id, username, hash FROM users WHERE hash in ("+"%s"*hashlist_len+")", hashlist)
+    cursor.execute("SELECT id, username, hash FROM users WHERE hash in ("+",".join(["%s"]*hashlist_len)+")", hashlist)
     return [{"id": id, "username": username, "hash": hash} for id, username, hash in cursor]
 
 
